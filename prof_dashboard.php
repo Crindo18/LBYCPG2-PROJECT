@@ -7,7 +7,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'professor') {
     exit();
 }
 
-// Get professor info
+// Get professor inf
 $professor_id = $_SESSION['user_id'];
 $stmt = $conn->prepare("SELECT * FROM professors WHERE id = ?");
 $stmt->bind_param("i", $professor_id);
