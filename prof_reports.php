@@ -1248,8 +1248,8 @@ $professor_name = $stmt->get_result()->fetch_assoc()['full_name'];
                 <a href="prof_study_plans.php" class="menu-item">Study Plans</a>
                 <a href="prof_acadadvising.php" class="menu-item">Academic Advising</a>
                 <a href="prof_concerns.php" class="menu-item">Student Concerns</a>
-                <a href="prof_reports.php" class="menu-item">Reports</a>
-                <a href="prof_email.php" class="menu-item active">Email System</a>
+                <a href="prof_reports.php" class="menu-item active">Reports</a>
+                <a href="prof_email.php" class="menu-item">Email System</a>
                 <a href="prof_schedule.php" class="menu-item">Schedule</a>
                 <a href="prof_grade_approvals.php" class="menu-item">Grade Approvals</a>
             </nav>
