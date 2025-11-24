@@ -75,10 +75,10 @@ $student_name = $stmt->get_result()->fetch_assoc()['name'];
             <nav class="sidebar-menu">
                 <a href="student_dashboard.php" class="menu-item">Dashboard</a>
                 <a href="student_booklet.php" class="menu-item">My Booklet</a>
-                <a href="student_advising_form.php" class="menu-item active">Academic Advising Form</a>
+                <a href="student_advising_form.php" class="menu-item">Academic Advising Form</a>
                 <a href="student_meeting.php" class="menu-item">Meeting Schedule</a>
                 <a href="student_documents.php" class="menu-item">Documents</a>
-                <a href="student_concerns.php" class="menu-item">Submit Concern</a>
+                <a href="student_concerns.php" class="menu-item active">Submit Concern</a>
                 <a href="student_profile.php" class="menu-item">My Profile</a>
             </nav>
         </aside>
