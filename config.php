@@ -48,13 +48,7 @@ function requireLogin() {
 }
 
 // Helper function to require specific user type
-function requireUserType($type) {
-    requireLogin();
-    if ($_SESSION['user_type'] !== $type) {
-        header('Location: login.php');
-        exit();
-    }
-}
+
 
 // Helper function to generate random password
 function generateRandomPassword($length = 12) {
