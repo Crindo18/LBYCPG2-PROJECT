@@ -1,20 +1,27 @@
 <?php
 session_start();
 require_once 'config.php';
-requireUserType('professor');
 
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'professor') {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    if (isset($_GET['action'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        exit();
+    }
+    header('Location: login.php');
     exit();
 }
 
-ob_clean();
-header('Content-Type: application/json');
-
 $professor_id = $_SESSION['user_id'];
-$action = $_GET['action'] ?? '';
 
-switch ($action) {
+// Handle API requests
+if (isset($_GET['action'])) {
+    ob_clean();
+    header('Content-Type: application/json');
+    
+    $action = $_GET['action'];
+    
+    switch ($action) {
     case 'get_programs':
         getPrograms();
         break;
@@ -35,8 +42,11 @@ switch ($action) {
         break;
     default:
         echo json_encode(['success' => false, 'message' => 'Invalid action']);
+    }
+    exit();
 }
 
+// API Functions
 function getPrograms() {
     global $conn, $professor_id;
     

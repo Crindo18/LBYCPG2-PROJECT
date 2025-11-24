@@ -3,28 +3,28 @@ session_start();
 require_once 'config.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'professor') {
+    if (isset($_GET['action']) || isset($_POST['action'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        exit();
+    }
     header('Location: login.php');
     exit();
 }
 
-ob_start();
-error_reporting(0);
-ini_set('display_errors', 0);
+$professor_id = $_SESSION['user_id'];
 
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'professor') {
+// Handle API requests
+if (isset($_GET['action']) || isset($_POST['action'])) {
+    ob_start();
+    error_reporting(0);
+    ini_set('display_errors', 0);
     ob_clean();
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-    exit();
-}
-
-ob_clean();
-header('Content-Type: application/json');
-
-$professor_id = $_SESSION['user_id'];
-$action = $_POST['action'] ?? $_GET['action'] ?? '';
-
-switch ($action) {
+    
+    $action = $_POST['action'] ?? $_GET['action'] ?? '';
+    
+    switch ($action) {
     case 'create_availability':
         createAvailability();
         break;
@@ -45,8 +45,11 @@ switch ($action) {
         break;
     default:
         echo json_encode(['success' => false, 'message' => 'Invalid action']);
+    }
+    exit();
 }
 
+// API Functions
 function createAvailability() {
     global $conn, $professor_id;
     
@@ -236,8 +239,7 @@ function deleteSlot() {
     }
 }
 
-$professor_id = $_SESSION['user_id'];
-
+// Get professor info for HTML display
 $stmt = $conn->prepare("SELECT CONCAT(first_name, ' ', last_name) as full_name, last_name FROM professors WHERE id = ?");
 $stmt->bind_param("i", $professor_id);
 $stmt->execute();

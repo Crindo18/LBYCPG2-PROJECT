@@ -3,21 +3,24 @@ session_start();
 require_once 'config.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'professor') {
+    if (isset($_GET['action']) || isset($_POST['action'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        exit();
+    }
     header('Location: login.php');
     exit();
 }
 
-header('Content-Type: application/json');
-
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'professor') {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-    exit();
-}
-
 $professor_id = $_SESSION['user_id'];
-$action = $_GET['action'] ?? $_POST['action'] ?? '';
 
-switch ($action) {
+// Handle API requests
+if (isset($_GET['action']) || isset($_POST['action'])) {
+    header('Content-Type: application/json');
+    
+    $action = $_GET['action'] ?? $_POST['action'] ?? '';
+    
+    switch ($action) {
     case 'get_stats':
         getStats($conn, $professor_id);
         break;
@@ -44,8 +47,11 @@ switch ($action) {
     
     default:
         echo json_encode(['success' => false, 'message' => 'Invalid action']);
+    }
+    exit();
 }
 
+// API Functions
 function getStats($conn, $professor_id) {
     // Pending count
     $stmt = $conn->prepare("
