@@ -6,7 +6,7 @@ $student_id = $_SESSION['user_id'];
 $message = '';
 $message_type = '';
 
-// Handle study plan submission
+// Handle study plan submissio
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_study_plan'])) {
     try {
         $conn->beginTransaction();
