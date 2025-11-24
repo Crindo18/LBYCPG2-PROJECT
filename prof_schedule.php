@@ -317,9 +317,11 @@ $professor_name = $professor['full_name'];
             <div class="top-bar">
                 <div>
                     <h1>Advising Schedule</h1>
-                    <p style="color: #666; font-size: 14px; margin-top: 5px;">Manage your advising appointments</p>
+                    <p style="color: #666; font-size: 14px; margin-top: 5px;">
+                        <span id="currentTime"></span>
+                    </p>
                 </div>
-                <a href="login.php" class="logout-btn">Logout</a>
+                <a href="logout.php" class="logout-btn">Logout</a>
             </div>
             
             <div class="content-card">
@@ -535,6 +537,24 @@ $professor_name = $professor['full_name'];
             default: return 'info';
         }
     }
+
+    // Update local time
+    function updateTime() {
+        const now = new Date();
+        const options = { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        };
+        document.getElementById('currentTime').textContent = now.toLocaleString('en-US', options);
+    }
+    setInterval(updateTime, 1000);
+    updateTime();
     </script>
 </body>
 </html>
