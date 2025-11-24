@@ -3,7 +3,279 @@ require_once 'auth_check.php';
 requireAdmin();
 
 require_once 'config.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+// Handle API requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
+    ob_start();
+    error_reporting(0);
+    ini_set('display_errors', 0);
+    
+    ob_clean();
+    header('Content-Type: application/json');
+    
+    $action = $_POST['action'] ?? $_GET['action'] ?? '';
+    
+    switch ($action) {
+        case 'get_advisers':
+            getAdvisers();
+            exit;
+        case 'bulk_clearance':
+            bulkClearance();
+            exit;
+        case 'send_mass_email':
+            sendMassEmail();
+            exit;
+    }
+}
+
+function getAdvisers() {
+    global $conn;
+    
+    $stmt = $conn->prepare("
+        SELECT id, CONCAT(first_name, ' ', last_name) as name 
+        FROM professors 
+        ORDER BY last_name
+    ");
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $advisers = [];
+    while ($row = $result->fetch_assoc()) {
+        $advisers[] = $row;
+    }
+    
+    echo json_encode(['success' => true, 'advisers' => $advisers]);
+}
+
+function bulkClearance() {
+    global $conn;
+    
+    $clearance_action = $_POST['clearance_action'] ?? '';
+    $target = $_POST['target'] ?? '';
+    
+    $clear_value = ($clearance_action === 'clear') ? 1 : 0;
+    
+    $where = "1=1";
+    
+    if ($target === 'program') {
+        $program = $_POST['program'] ?? '';
+        $where .= " AND program = '" . $conn->real_escape_string($program) . "'";
+    } elseif ($target === 'adviser') {
+        $adviser_id = $_POST['adviser_id'] ?? 0;
+        $where .= " AND advisor_id = " . (int)$adviser_id;
+    } elseif ($target === 'list') {
+        $student_list = $_POST['student_list'] ?? '';
+        $ids = array_filter(array_map('trim', explode("\n", $student_list)));
+        if (empty($ids)) {
+            echo json_encode(['success' => false, 'message' => 'No student IDs provided']);
+            return;
+        }
+        $id_list = "'" . implode("','", array_map([$conn, 'real_escape_string'], $ids)) . "'";
+        $where .= " AND id_number IN ($id_list)";
+    }
+    
+    $query = "UPDATE students SET advising_cleared = $clear_value WHERE $where";
+    $conn->query($query);
+    $affected = $conn->affected_rows;
+    
+    echo json_encode([
+        'success' => true,
+        'message' => "$affected students " . ($clear_value ? 'cleared' : 'uncleared'),
+        'stats' => [
+            'affected' => $affected
+        ]
+    ]);
+}
+
+function sendMassEmail() {
+    global $conn;
+    
+    $recipients = $_POST['recipients'] ?? '';
+    $subject = trim($_POST['subject'] ?? '');
+    $message = trim($_POST['message'] ?? '');
+    $preview = !empty($_POST['preview']);
+    
+    if (!$recipients || $subject === '' || $message === '') {
+        echo json_encode(['success' => false, 'message' => 'Recipients, subject, and message are required']);
+        return;
+    }
+    
+    $query = "SELECT id, CONCAT(first_name, ' ', last_name) as name, email, id_number, program FROM ";
+    
+    switch ($recipients) {
+        case 'all_students':
+            $query .= "students";
+            break;
+        case 'all_professors':
+            $query .= "professors";
+            break;
+        case 'program':
+            $program = $_POST['program'] ?? '';
+            $query .= "students WHERE program = '" . $conn->real_escape_string($program) . "'";
+            break;
+        case 'cleared':
+            $query .= "students WHERE advising_cleared = 1";
+            break;
+        case 'not_cleared':
+            $query .= "students WHERE advising_cleared = 0";
+            break;
+        case 'at_risk':
+            $query .= "students WHERE accumulated_failed_units >= 25";
+            break;
+        default:
+            echo json_encode(['success' => false, 'message' => 'Invalid recipient selection']);
+            return;
+    }
+    
+    $result = $conn->query($query);
+    $targets = [];
+    while ($row = $result->fetch_assoc()) {
+        $targets[] = $row;
+        if ($preview) break;
+    }
+    
+    if (empty($targets)) {
+        echo json_encode(['success' => false, 'message' => 'No recipients match the selected filter']);
+        return;
+    }
+    
+    if ($preview) {
+        $adminContact = getAdminContact();
+        if (!$adminContact || empty($adminContact['email'])) {
+            echo json_encode(['success' => false, 'message' => 'Admin account is missing an email address for previews']);
+            return;
+        }
+        
+        $sampleUser = $targets[0];
+        $body = personalizeMessage($message, $sampleUser);
+        
+        try {
+            $mail = createMailer();
+            $mail->addAddress($adminContact['email'], $adminContact['name']);
+            $mail->Subject = '[PREVIEW] ' . $subject;
+            $mail->Body = nl2br($body);
+            $mail->AltBody = strip_tags($body);
+            $mail->send();
+            
+            echo json_encode([
+                'success' => true,
+                'message' => "Preview email sent to {$adminContact['email']}",
+                'stats' => [
+                    'emails_sent' => 1,
+                    'failed' => 0
+                ]
+            ]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Preview send failed: ' . $e->getMessage()]);
+        }
+        return;
+    }
+    
+    $sent = 0;
+    $failed = [];
+    
+    foreach ($targets as $user) {
+        if (empty($user['email'])) {
+            $failed[] = ($user['name'] ?? 'Unknown') . ' (missing email)';
+            continue;
+        }
+        
+        try {
+            $mail = createMailer();
+            $mail->addAddress($user['email'], $user['name'] ?? '');
+            $mail->Subject = $subject;
+            $body = personalizeMessage($message, $user);
+            $mail->Body = nl2br($body);
+            $mail->AltBody = strip_tags($body);
+            $mail->send();
+            $sent++;
+        } catch (Exception $e) {
+            $failed[] = $user['email'] . ': ' . $mail->ErrorInfo;
+        }
+    }
+    
+    $responseMessage = "$sent email(s) sent.";
+    if ($failed) {
+        $responseMessage .= ' ' . count($failed) . ' failed.';
+    }
+    
+    echo json_encode([
+        'success' => $sent > 0,
+        'message' => $responseMessage,
+        'stats' => [
+            'emails_sent' => $sent,
+            'failed' => count($failed)
+        ],
+        'errors' => $failed
+    ]);
+}
+
+function createMailer(): PHPMailer {
+    $mail = new PHPMailer(true);
+    $mail->isSMTP();
+    $mail->Host = MAILER_HOST;
+    $mail->Port = MAILER_PORT;
+    
+    if (MAILER_USERNAME) {
+        $mail->SMTPAuth = true;
+        $mail->Username = MAILER_USERNAME;
+        $mail->Password = MAILER_PASSWORD;
+    } else {
+        $mail->SMTPAuth = false;
+    }
+    
+    $encryption = strtolower(MAILER_ENCRYPTION);
+    if ($encryption === 'ssl') {
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+    } elseif ($encryption === 'tls') {
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    }
+    
+    $mail->setFrom(MAILER_FROM_EMAIL, MAILER_FROM_NAME);
+    $mail->isHTML(true);
+    
+    return $mail;
+}
+
+function personalizeMessage(string $template, array $user): string {
+    return str_replace(
+        ['{name}', '{id_number}', '{program}'],
+        [
+            $user['name'] ?? 'Student',
+            $user['id_number'] ?? 'N/A',
+            $user['program'] ?? 'N/A'
+        ],
+        $template
+    );
+}
+
+function getAdminContact(): ?array {
+    global $conn;
+    
+    if (empty($_SESSION['user_id'])) {
+        return null;
+    }
+    
+    $stmt = $conn->prepare("SELECT username, email FROM admin WHERE id = ?");
+    $stmt->bind_param("i", $_SESSION['user_id']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($row = $result->fetch_assoc()) {
+        return [
+            'name' => $row['username'] ?: 'Administrator',
+            'email' => $row['email'] ?? null
+        ];
+    }
+    
+    return null;
+}
+
+// HTML Interface below
 $admin_id = $_SESSION['user_id'];
 $stmt = $conn->prepare("SELECT username FROM admin WHERE id = ?");
 $stmt->bind_param("i", $admin_id);
@@ -47,11 +319,6 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
         .form-group textarea { min-height: 120px; resize: vertical; font-family: inherit; }
         .form-group .help-text { font-size: 12px; color: #999; margin-top: 5px; }
         
-        .file-upload-area { border: 2px dashed #3498db; border-radius: 8px; padding: 30px; text-align: center; background: #f8f9fa; cursor: pointer; transition: all 0.3s; }
-        .file-upload-area:hover { background: #e9ecef; border-color: #2980b9; }
-        .file-upload-icon { font-size: 48px; color: #3498db; margin-bottom: 10px; }
-        .file-info { margin-top: 15px; padding: 10px; background: white; border-radius: 5px; font-size: 14px; }
-        
         .btn { padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600; transition: all 0.3s; width: 100%; }
         .btn-primary { background: #3498db; color: white; }
         .btn-primary:hover { background: #2980b9; }
@@ -66,8 +333,6 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
         .alert { padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; }
         .alert.success { background: #d4edda; border-left: 4px solid #28a745; color: #155724; }
         .alert.danger { background: #f8d7da; border-left: 4px solid #dc3545; color: #721c24; }
-        .alert.warning { background: #fff3cd; border-left: 4px solid #ffc107; color: #856404; }
-        .alert.info { background: #d1ecf1; border-left: 4px solid #17a2b8; color: #0c5460; }
         
         .progress-container { display: none; margin-top: 20px; }
         .progress-bar { width: 100%; height: 30px; background: #f0f0f0; border-radius: 15px; overflow: hidden; }
@@ -82,11 +347,7 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
         .checkbox-group { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
         .checkbox-group input[type="checkbox"] { width: auto; }
         
-        .template-download { display: inline-block; padding: 8px 16px; background: #95a5a6; color: white; border-radius: 5px; text-decoration: none; font-size: 13px; margin-bottom: 15px; }
-        .template-download:hover { background: #7f8c8d; }
         .bulk-upload-section { margin-top: 40px; }
-        .bulk-upload-heading { color: #2c3e50; margin-bottom: 10px; }
-        .bulk-upload-subtitle { color: #666; margin-bottom: 20px; }
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; flex-wrap: wrap; }
         .tab-btn { padding: 10px 22px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 15px; font-weight: 600; color: #666; transition: all 0.3s; }
         .tab-btn.active { color: #3498db; border-bottom-color: #3498db; }
@@ -94,28 +355,6 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
         .tab-content.active { display: block; }
         .content-card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 25px; }
         .content-card h2 { font-size: 22px; color: #2c3e50; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
-        .upload-section { margin-top: 10px; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 2px dashed #ddd; }
-        .upload-section h3 { font-size: 18px; color: #2c3e50; margin-bottom: 15px; }
-        .upload-section p { color: #666; margin-bottom: 15px; font-size: 14px; }
-        .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; margin-top: 10px; }
-        .file-input-wrapper input[type="file"] { position: absolute; left: -9999px; }
-        .file-input-label { padding: 10px 20px; background: #3498db; color: white; border-radius: 5px; cursor: pointer; display: inline-block; font-size: 14px; }
-        .file-input-label:hover { background: #2980b9; }
-        .selected-file { margin: 10px 0; color: #555; font-size: 14px; }
-        .btn-upload { padding: 10px 24px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; margin-top: 10px; }
-        .btn-upload:hover { background: #1f8c4c; }
-        .btn-upload:disabled { background: #ccc; cursor: not-allowed; }
-        .download-template { color: #3498db; text-decoration: none; font-size: 14px; margin-left: 15px; }
-        .download-template:hover { text-decoration: underline; }
-        .result-box { margin-top: 20px; padding: 15px; border-radius: 5px; display: none; }
-        .result-box.success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
-        .result-box.error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
-        .result-details { margin-top: 10px; font-size: 13px; }
-        .error-list { max-height: 200px; overflow-y: auto; margin-top: 10px; }
-        .error-item { padding: 5px; background: white; margin: 5px 0; border-radius: 3px; font-size: 12px; }
-        .format-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-        .format-table th, .format-table td { padding: 8px; border: 1px solid #ddd; text-align: left; }
-        .format-table th { background: #f0f0f0; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -131,7 +370,7 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
                 <a href="admin_courses.php" class="menu-item">Course Catalog</a>
                 <a href="admin_advisingassignment.php" class="menu-item">Advising Assignments</a>
                 <a href="admin_reports.php" class="menu-item">System Reports</a>
-                <a href="admin_bulk_operations.php" class="menu-item">Bulk Ops & Uploads</a>
+                <a href="admin_bulk_operations.php" class="menu-item active">Bulk Ops & Uploads</a>
             </nav>
         </aside>
         
@@ -266,176 +505,14 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
                     <div class="result-box" id="emailResult"></div>
                 </div>
             </div>
-
-            <section class="bulk-upload-section">
-                <h2 class="bulk-upload-heading">Bulk Upload Center</h2>
-                <p class="bulk-upload-subtitle">Import students, professors, and courses via CSV templates for faster onboarding.</p>
-                
-                <div class="tabs">
-                    <button class="tab-btn active" data-upload-tab="students" onclick="switchUploadTab('students')">Upload Students</button>
-                    <button class="tab-btn" data-upload-tab="professors" onclick="switchUploadTab('professors')">Upload Professors</button>
-                    <button class="tab-btn" data-upload-tab="courses" onclick="switchUploadTab('courses')">Upload Courses</button>
-                </div>
-                
-                <!-- Students Upload Tab -->
-                <div id="students" class="tab-content active">
-                    <div class="content-card">
-                        <h2>Bulk Upload Students</h2>
-                        <div class="upload-section">
-                            <h3>📊 Upload Student List (CSV)</h3>
-                            <p>Upload a CSV file containing student information. Default password will be set to their ID number.</p>
-                            
-                            <a href="templates/students_template.csv" class="download-template" download>⬇ Download CSV Template</a>
-                            
-                            <form id="studentUploadForm" enctype="multipart/form-data">
-                                <div class="file-input-wrapper">
-                                    <label class="file-input-label" for="studentFile">Choose CSV File</label>
-                                    <input type="file" id="studentFile" name="csv_file" accept=".csv" onchange="updateFileName('studentFile')">
-                                </div>
-                                <div class="selected-file" id="studentFileName"></div>
-                                <button type="submit" class="btn-upload">Upload Students</button>
-                            </form>
-                            
-                            <div id="studentResult" class="result-box"></div>
-                            
-                            <details style="margin-top: 20px;">
-                                <summary style="cursor: pointer; font-weight: 600; color: #555;">CSV Format Requirements</summary>
-                                <table class="format-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Column</th>
-                                            <th>Description</th>
-                                            <th>Example</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr><td>id_number</td><td>Student ID (numbers only)</td><td>12012345</td></tr>
-                                        <tr><td>first_name</td><td>First name</td><td>Juan</td></tr>
-                                        <tr><td>middle_name</td><td>Middle name (optional)</td><td>Santos</td></tr>
-                                        <tr><td>last_name</td><td>Last name</td><td>Dela Cruz</td></tr>
-                                        <tr><td>college</td><td>College name</td><td>Gokongwei College of Engineering</td></tr>
-                                        <tr><td>department</td><td>Department name</td><td>GCOE-ECEE</td></tr>
-                                        <tr><td>program</td><td>Program name</td><td>BS Computer Engineering</td></tr>
-                                        <tr><td>specialization</td><td>Specialization (optional)</td><td>N/A</td></tr>
-                                        <tr><td>phone_number</td><td>Contact number</td><td>+63 917 123 4567</td></tr>
-                                        <tr><td>email</td><td>Email address</td><td>juan_delacruz@dlsu.edu.ph</td></tr>
-                                        <tr><td>parent_guardian_name</td><td>Parent/Guardian name</td><td>Maria Dela Cruz</td></tr>
-                                        <tr><td>parent_guardian_number</td><td>Parent/Guardian contact</td><td>+63 918 765 4321</td></tr>
-                                    </tbody>
-                                </table>
-                            </details>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Professors Upload Tab -->
-                <div id="professors" class="tab-content">
-                    <div class="content-card">
-                        <h2>Bulk Upload Professors</h2>
-                        <div class="upload-section">
-                            <h3>📊 Upload Professor List (CSV)</h3>
-                            <p>Upload a CSV file containing professor information. Default password will be set to their ID number.</p>
-                            
-                            <a href="templates/professors_template.csv" class="download-template" download>⬇ Download CSV Template</a>
-                            
-                            <form id="professorUploadForm" enctype="multipart/form-data">
-                                <div class="file-input-wrapper">
-                                    <label class="file-input-label" for="professorFile">Choose CSV File</label>
-                                    <input type="file" id="professorFile" name="csv_file" accept=".csv" onchange="updateFileName('professorFile')">
-                                </div>
-                                <div class="selected-file" id="professorFileName"></div>
-                                <button type="submit" class="btn-upload">Upload Professors</button>
-                            </form>
-                            
-                            <div id="professorResult" class="result-box"></div>
-                            
-                            <details style="margin-top: 20px;">
-                                <summary style="cursor: pointer; font-weight: 600; color: #555;">CSV Format Requirements</summary>
-                                <table class="format-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Column</th>
-                                            <th>Description</th>
-                                            <th>Example</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr><td>id_number</td><td>Professor ID (numbers only)</td><td>10012345</td></tr>
-                                        <tr><td>first_name</td><td>First name</td><td>Maria</td></tr>
-                                        <tr><td>middle_name</td><td>Middle name (optional)</td><td>Santos</td></tr>
-                                        <tr><td>last_name</td><td>Last name</td><td>Garcia</td></tr>
-                                        <tr><td>department</td><td>Department name</td><td>GCOE-ECEE</td></tr>
-                                        <tr><td>email</td><td>Email address</td><td>maria.garcia@dlsu.edu.ph</td></tr>
-                                    </tbody>
-                                </table>
-                            </details>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Courses Upload Tab -->
-                <div id="courses" class="tab-content">
-                    <div class="content-card">
-                        <h2>Bulk Upload Courses</h2>
-                        <div class="upload-section">
-                            <h3>📊 Upload Course Catalog (CSV)</h3>
-                            <p>Upload a CSV file containing course information for the catalog.</p>
-                            
-                            <a href="templates/courses_template.csv" class="download-template" download>⬇ Download CSV Template</a>
-                            
-                            <form id="courseUploadForm" enctype="multipart/form-data">
-                                <div class="file-input-wrapper">
-                                    <label class="file-input-label" for="courseFile">Choose CSV File</label>
-                                    <input type="file" id="courseFile" name="csv_file" accept=".csv" onchange="updateFileName('courseFile')">
-                                </div>
-                                <div class="selected-file" id="courseFileName"></div>
-                                <button type="submit" class="btn-upload">Upload Courses</button>
-                            </form>
-                            
-                            <div id="courseResult" class="result-box"></div>
-                            
-                            <details style="margin-top: 20px;">
-                                <summary style="cursor: pointer; font-weight: 600; color: #555;">CSV Format Requirements</summary>
-                                <table class="format-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Column</th>
-                                            <th>Description</th>
-                                            <th>Example</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr><td>course_code</td><td>Unique course code</td><td>CSSWENG</td></tr>
-                                        <tr><td>course_name</td><td>Full course name</td><td>Software Engineering</td></tr>
-                                        <tr><td>units</td><td>Number of units</td><td>3</td></tr>
-                                        <tr><td>program</td><td>Program name</td><td>BS Computer Engineering</td></tr>
-                                        <tr><td>term</td><td>Term (Term 1 to Term 12)</td><td>Term 2</td></tr>
-                                        <tr><td>course_type</td><td>Type: major, minor, elective, general_education</td><td>major</td></tr>
-                                        <tr><td>prerequisites</td><td>Format: COURSECODE(TYPE) with TYPE as H/S/C, separated by commas</td><td>FNDMATH(H),PROLOGI(S)</td></tr>
-                                    </tbody>
-                                </table>
-                                <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 5px; font-size: 13px;">
-                                    <strong>Prerequisite Types:</strong><br>
-                                    • <strong>H</strong> = Hard-Prerequisite<br>
-                                    • <strong>S</strong> = Soft-Prerequisite<br>
-                                    • <strong>C</strong> = Co-requisite<br>
-                                    <strong>Example:</strong> "FNDMATH(H),PROLOGI(S)" or "PROLOGI(C)"
-                                </div>
-                            </details>
-                        </div>
-                    </div>
-                </div>
-            </section>
         </main>
     </div>
 
     <script>
-        // Load advisers on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadAdvisers();
         });
 
-        // Show/hide conditional fields
         document.getElementById('clearanceTarget')?.addEventListener('change', function() {
             document.getElementById('clearanceProgramGroup').style.display = 
                 this.value === 'program' ? 'block' : 'none';
@@ -451,7 +528,7 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
         });
 
         function loadAdvisers() {
-            fetch('admin_bulk_operations_api.php?action=get_advisers')
+            fetch('?action=get_advisers')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -491,7 +568,7 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
                 return;
             }
             
-            fetch('admin_bulk_operations_api.php', {
+            fetch('', {
                 method: 'POST',
                 body: formData
             })
@@ -537,7 +614,7 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
             
             showProgress('emailProgress', 'emailProgressFill');
             
-            fetch('admin_bulk_operations_api.php', {
+            fetch('', {
                 method: 'POST',
                 body: formData
             })
@@ -549,7 +626,6 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
                 
                 if (data.stats) {
                     showResult('emailResult', data.stats);
-                    renderErrorList('emailResult', data.errors);
                 }
             })
             .catch(error => {
@@ -599,163 +675,6 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
             container.innerHTML = html;
             container.style.display = 'block';
         }
-
-        function renderErrorList(containerId, errors) {
-            if (!errors || errors.length === 0) {
-                return;
-            }
-            const container = document.getElementById(containerId);
-            if (!container) return;
-            
-            const list = document.createElement('div');
-            list.className = 'error-list';
-            list.innerHTML = '<strong>Details:</strong>';
-            errors.forEach(err => {
-                const item = document.createElement('div');
-                item.className = 'error-item';
-                item.textContent = err;
-                list.appendChild(item);
-            });
-            container.appendChild(list);
-        }
-
-        function switchUploadTab(tabName) {
-            document.querySelectorAll('.bulk-upload-section .tab-content').forEach(tab => tab.classList.remove('active'));
-            const target = document.getElementById(tabName);
-            if (target) {
-                target.classList.add('active');
-            }
-            document.querySelectorAll('.bulk-upload-section .tab-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.uploadTab === tabName);
-            });
-        }
-
-        function updateFileName(inputId) {
-            const input = document.getElementById(inputId);
-            const fileNameDiv = document.getElementById(inputId + 'Name');
-            if (!input || !fileNameDiv) return;
-            fileNameDiv.textContent = input.files.length > 0 ? '📄 ' + input.files[0].name : '';
-        }
-
-        document.getElementById('studentUploadForm')?.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            formData.append('action', 'bulk_upload_students');
-            const resultDiv = document.getElementById('studentResult');
-            resultDiv.style.display = 'block';
-            resultDiv.className = 'result-box';
-            resultDiv.innerHTML = 'Uploading... Please wait.';
-            
-            fetch('admin_api.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    resultDiv.className = 'result-box success';
-                    let html = `<strong>✓ Upload Successful!</strong><div class="result-details">`;
-                    html += `Total: ${data.total} | Successful: ${data.successful} | Failed: ${data.failed}</div>`;
-                    if (data.errors.length > 0) {
-                        html += `<div class="error-list"><strong>Errors:</strong>`;
-                        data.errors.forEach(err => {
-                            html += `<div class="error-item">${err}</div>`;
-                        });
-                        html += `</div>`;
-                    }
-                    resultDiv.innerHTML = html;
-                    this.reset();
-                    document.getElementById('studentFileName').textContent = '';
-                } else {
-                    resultDiv.className = 'result-box error';
-                    resultDiv.innerHTML = `<strong>✗ Upload Failed</strong><div class="result-details">${data.message}</div>`;
-                }
-            })
-            .catch(error => {
-                resultDiv.className = 'result-box error';
-                resultDiv.innerHTML = `<strong>✗ Error</strong><div class="result-details">${error.message}</div>`;
-            });
-        });
-
-        document.getElementById('professorUploadForm')?.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            formData.append('action', 'bulk_upload_professors');
-            const resultDiv = document.getElementById('professorResult');
-            resultDiv.style.display = 'block';
-            resultDiv.className = 'result-box';
-            resultDiv.innerHTML = 'Uploading... Please wait.';
-            
-            fetch('admin_api.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    resultDiv.className = 'result-box success';
-                    let html = `<strong>✓ Upload Successful!</strong><div class="result-details">`;
-                    html += `Total: ${data.total} | Successful: ${data.successful} | Failed: ${data.failed}</div>`;
-                    if (data.errors.length > 0) {
-                        html += `<div class="error-list"><strong>Errors:</strong>`;
-                        data.errors.forEach(err => {
-                            html += `<div class="error-item">${err}</div>`;
-                        });
-                        html += `</div>`;
-                    }
-                    resultDiv.innerHTML = html;
-                    this.reset();
-                    document.getElementById('professorFileName').textContent = '';
-                } else {
-                    resultDiv.className = 'result-box error';
-                    resultDiv.innerHTML = `<strong>✗ Upload Failed</strong><div class="result-details">${data.message}</div>`;
-                }
-            })
-            .catch(error => {
-                resultDiv.className = 'result-box error';
-                resultDiv.innerHTML = `<strong>✗ Error</strong><div class="result-details">${error.message}</div>`;
-            });
-        });
-
-        document.getElementById('courseUploadForm')?.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            formData.append('action', 'bulk_upload_courses');
-            const resultDiv = document.getElementById('courseResult');
-            resultDiv.style.display = 'block';
-            resultDiv.className = 'result-box';
-            resultDiv.innerHTML = 'Uploading... Please wait.';
-            
-            fetch('admin_api.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    resultDiv.className = 'result-box success';
-                    let html = `<strong>✓ Upload Successful!</strong><div class="result-details">`;
-                    html += `Total: ${data.total} | Successful: ${data.successful} | Failed: ${data.failed}</div>`;
-                    if (data.errors.length > 0) {
-                        html += `<div class="error-list"><strong>Errors:</strong>`;
-                        data.errors.forEach(err => {
-                            html += `<div class="error-item">${err}</div>`;
-                        });
-                        html += `</div>`;
-                    }
-                    resultDiv.innerHTML = html;
-                    this.reset();
-                    document.getElementById('courseFileName').textContent = '';
-                } else {
-                    resultDiv.className = 'result-box error';
-                    resultDiv.innerHTML = `<strong>✗ Upload Failed</strong><div class="result-details">${data.message}</div>`;
-                }
-            })
-            .catch(error => {
-                resultDiv.className = 'result-box error';
-                resultDiv.innerHTML = `<strong>✗ Error</strong><div class="result-details">${error.message}</div>`;
-            });
-        });
     </script>
 </body>
 </html>
