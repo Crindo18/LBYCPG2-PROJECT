@@ -254,53 +254,61 @@ function getCourseEnrollment() {
     $term = $_GET['term'] ?? '';
     
     // Get course enrollment stats
+    // Include shared courses (program='0') along with program-specific courses
     $query = "
         SELECT 
             c.course_code,
             c.course_name,
-            c.program,
+            CASE 
+                WHEN c.program = '0' THEN 'All Programs (Shared)'
+                ELSE c.program
+            END as program,
             c.term,
             COUNT(DISTINCT b.student_id) as enrolled_count,
-            COUNT(DISTINCT CASE WHEN b.is_failed = 0 THEN b.student_id END) as passed_count,
+            COUNT(DISTINCT CASE WHEN b.is_failed = 0 AND b.grade IS NOT NULL THEN b.student_id END) as passed_count,
             COUNT(DISTINCT CASE WHEN b.is_failed = 1 THEN b.student_id END) as failed_count
         FROM course_catalog c
         LEFT JOIN student_advising_booklet b ON b.course_code = c.course_code
-        WHERE 1=1";
+        WHERE c.is_active = 1";
     
     if ($program) {
-        $query .= " AND c.program = '" . $conn->real_escape_string($program) . "'";
+        // Include both specific program courses and shared courses (program='0')
+        $query .= " AND (c.program = '" . $conn->real_escape_string($program) . "' OR c.program = '0')";
     }
     
     if ($term) {
         $query .= " AND c.term = '" . $conn->real_escape_string($term) . "'";
     }
     
-    $query .= " GROUP BY c.id ORDER BY enrolled_count DESC LIMIT 20";
+    $query .= " GROUP BY c.id ORDER BY c.term, c.course_code";
     
     $result = $conn->query($query);
     $courses = [];
     $labels = [];
     $values = [];
     
-    while ($row = $result->fetch_assoc()) {
-        $enrolled = $row['enrolled_count'];
-        $passed = $row['passed_count'];
-        $failed = $row['failed_count'];
-        
-        $pass_rate = $enrolled > 0 ? round(($passed / $enrolled) * 100, 1) : 0;
-        $fail_rate = $enrolled > 0 ? round(($failed / $enrolled) * 100, 1) : 0;
-        
-        $row['pass_rate'] = $pass_rate;
-        $row['fail_rate'] = $fail_rate;
-        
-        $courses[] = $row;
-        $labels[] = $row['course_code'];
-        $values[] = $enrolled;
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $enrolled = (int)$row['enrolled_count'];
+            $passed = (int)$row['passed_count'];
+            $failed = (int)$row['failed_count'];
+            
+            $pass_rate = $enrolled > 0 ? round(($passed / $enrolled) * 100, 1) : 0;
+            $fail_rate = $enrolled > 0 ? round(($failed / $enrolled) * 100, 1) : 0;
+            
+            $row['pass_rate'] = $pass_rate;
+            $row['fail_rate'] = $fail_rate;
+            $row['enrolled_count'] = $enrolled;
+            
+            $courses[] = $row;
+            $labels[] = $row['course_code'];
+            $values[] = $enrolled;
+        }
     }
     
     $chart_data = [
-        'labels' => $labels,
-        'values' => $values
+        'labels' => array_slice($labels, 0, 20), // Limit chart to top 20
+        'values' => array_slice($values, 0, 20)
     ];
     
     echo json_encode([
