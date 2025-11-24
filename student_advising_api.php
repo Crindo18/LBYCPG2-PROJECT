@@ -69,20 +69,6 @@ function submitAdvisingForm() {
             throw new Exception('Failed to save grade screenshot');
         }
         
-        // Upload booklet file
-        if (!isset($_FILES['booklet_file']) || $_FILES['booklet_file']['error'] !== UPLOAD_ERR_OK) {
-            throw new Exception('Booklet file upload failed');
-        }
-        
-        $bookletFile = $_FILES['booklet_file'];
-        $bookletExt = strtolower(pathinfo($bookletFile['name'], PATHINFO_EXTENSION));
-        $bookletFilename = $student_id . '_' . time() . '_booklet.' . $bookletExt;
-        $bookletTargetPath = $uploadDir . $bookletFilename;
-        
-        if (!move_uploaded_file($bookletFile['tmp_name'], $bookletTargetPath)) {
-            throw new Exception('Failed to save booklet file');
-        }
-        
         // Parse current courses JSON
         $currentCourses = json_decode($_POST['current_courses'], true);
         if (!$currentCourses || !is_array($currentCourses)) {
@@ -92,9 +78,7 @@ function submitAdvisingForm() {
         // Start transaction
         $conn->begin_transaction();
         
-        // ---------------------------------------------------------
-        // FIX: Pack data into JSON for 'form_data' column
-        // ---------------------------------------------------------
+        // Pack data into JSON for 'form_data' column
         $formDataArray = [
             'academic_year' => $_POST['academic_year'],
             'term' => $_POST['term'],
@@ -112,6 +96,7 @@ function submitAdvisingForm() {
         $formDataJson = json_encode($formDataArray);
 
         // Insert using the correct columns from your database schema
+        // Note: booklet_file column is set to NULL as it is no longer required
         $stmt = $conn->prepare("
             INSERT INTO academic_advising_forms (
                 student_id, 
@@ -120,15 +105,14 @@ function submitAdvisingForm() {
                 booklet_file, 
                 status, 
                 submitted_at
-            ) VALUES (?, ?, ?, ?, 'pending', NOW())
+            ) VALUES (?, ?, ?, NULL, 'pending', NOW())
         ");
         
         $stmt->bind_param(
-            "isss",
+            "iss",
             $student_id,
             $formDataJson,
-            $gradeTargetPath,
-            $bookletTargetPath
+            $gradeTargetPath
         );
         
         if (!$stmt->execute()) {
@@ -137,12 +121,7 @@ function submitAdvisingForm() {
         
         $formId = $conn->insert_id;
         
-        // ---------------------------------------------------------
-        // FIX: Insert Courses using correct table columns
-        // ---------------------------------------------------------
-        // Your DB table 'advising_form_courses' does not have 'course_name'.
-        // It has 'course_type', 'course_code', 'units', 'prerequisites'.
-        
+        // Insert current enrolled courses
         $stmt = $conn->prepare("
             INSERT INTO advising_form_courses (
                 form_id, course_type, course_code, units
@@ -198,9 +177,6 @@ function submitAdvisingForm() {
         if (isset($gradeTargetPath) && file_exists($gradeTargetPath)) {
             unlink($gradeTargetPath);
         }
-        if (isset($bookletTargetPath) && file_exists($bookletTargetPath)) {
-            unlink($bookletTargetPath);
-        }
         
         echo json_encode([
             'success' => false,
@@ -233,9 +209,7 @@ function getAdvisingForms() {
         
         $forms = [];
         while ($row = $result->fetch_assoc()) {
-            // ---------------------------------------------------------
-            // FIX: Unpack JSON data so the frontend can read it
-            // ---------------------------------------------------------
+            // Unpack JSON data so the frontend can read it
             if (!empty($row['form_data'])) {
                 $jsonData = json_decode($row['form_data'], true);
                 if (is_array($jsonData)) {
