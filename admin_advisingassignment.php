@@ -88,8 +88,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
                 <a href="admin_courses.php" class="menu-item">Course Catalog</a>
                 <a href="admin_advisingassignment.php" class="menu-item">Advising Assignments</a>
                 <a href="admin_reports.php" class="menu-item">System Reports</a>
-                <a href="admin_bulk_operations.php" class="menu-item">Bulk Operations</a>
-                <a href="admin_bulk_upload.php" class="menu-item">Bulk Operations</a>
+                <a href="admin_bulk_operations.php" class="menu-item">Bulk Ops & Uploads</a>
             </nav>
         </aside>
         
@@ -203,16 +202,19 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
 
             let html = '';
             professors.forEach(prof => {
-                const completion = prof.advisee_count > 0 ? Math.round((0 / prof.advisee_count) * 100) : 0;
+                const totalAdvisees = Number(prof.advisee_count) || 0;
+                const completed = Number(prof.completed_advisees) || 0;
+                const pending = Number(prof.pending_advisees) || 0;
+                const completion = totalAdvisees > 0 ? Math.round((completed / totalAdvisees) * 100) : 0;
                 
                 html += `
                     <tr>
                         <td>${prof.id_number}</td>
                         <td>${prof.full_name}</td>
                         <td>DECE</td>
-                        <td>${prof.advisee_count}</td>
-                        <td>0</td>
-                        <td>${prof.advisee_count}</td>
+                        <td>${totalAdvisees}</td>
+                        <td>${completed}</td>
+                        <td>${pending}</td>
                         <td>
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <div class="progress-bar" style="flex: 1;">

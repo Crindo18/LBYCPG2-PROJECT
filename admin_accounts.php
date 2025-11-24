@@ -89,8 +89,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
                 <a href="admin_courses.php" class="menu-item">Course Catalog</a>
                 <a href="admin_advisingassignment.php" class="menu-item">Advising Assignments</a>
                 <a href="admin_reports.php" class="menu-item">System Reports</a>
-                <a href="admin_bulk_operations.php" class="menu-item">Bulk Operations</a>
-                <a href="admin_bulk_upload.php" class="menu-item">Bulk Operations</a>
+                <a href="admin_bulk_operations.php" class="menu-item">Bulk Ops & Uploads</a>
             </nav>
         </aside>
         
@@ -390,7 +389,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
             
             let html = '';
             students.forEach(student => {
-                const failedUnits = student.accumulated_failed_units || 0;
+                const failedUnits = Number(student.accumulated_failed_units) || 0;
                 let failedBadge = '';
                 
                 if (failedUnits >= 25) {
@@ -399,7 +398,8 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
                     failedBadge = '<span class="badge warning">AT RISK</span>';
                 }
                 
-                const statusBadge = student.advising_cleared ? 
+                const isCleared = Number(student.advising_cleared) === 1;
+                const statusBadge = isCleared ? 
                     '<span class="badge success">Cleared</span>' : 
                     '<span class="badge" style="background: #fff3cd; color: #856404;">Pending</span>';
                 

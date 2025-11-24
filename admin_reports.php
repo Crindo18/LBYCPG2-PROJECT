@@ -95,8 +95,7 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
                 <a href="admin_courses.php" class="menu-item">Course Catalog</a>
                 <a href="admin_advisingassignment.php" class="menu-item">Advising Assignments</a>
                 <a href="admin_reports.php" class="menu-item">System Reports</a>
-                <a href="admin_bulk_operations.php" class="menu-item">Bulk Operations</a>
-                <a href="admin_bulk_upload.php" class="menu-item">Bulk Uploads</a>
+                <a href="admin_bulk_operations.php" class="menu-item">Bulk Ops & Uploads</a>
             </nav>
         </aside>
         
@@ -420,6 +419,10 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
                 <div class="stat-card orange">
                     <div class="stat-label">BSECE Students</div>
                     <div class="stat-value">${stats.bsece_students}</div>
+                </div>
+                <div class="stat-card red">
+                    <div class="stat-label">BSEE Students</div>
+                    <div class="stat-value">${stats.bsee_students}</div>
                 </div>
             `;
         }

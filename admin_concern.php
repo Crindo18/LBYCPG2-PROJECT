@@ -54,8 +54,7 @@
                 <a href="admin_courses.php" class="menu-item">Course Catalog</a>
                 <a href="admin_advisingassignment.php" class="menu-item">Advising Assignments</a>
                 <a href="admin_reports.php" class="menu-item">System Reports</a>
-                <a href="admin_bulk_operations.php" class="menu-item">Bulk Operations</a>
-                <a href="admin_bulk_upload.php" class="menu-item">Bulk Operations</a>
+                <a href="admin_bulk_operations.php" class="menu-item">Bulk Ops & Uploads</a>
             </nav>
         </aside>
         

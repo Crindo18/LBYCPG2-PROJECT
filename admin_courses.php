@@ -90,8 +90,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
                 <a href="admin_courses.php" class="menu-item">Course Catalog</a>
                 <a href="admin_advisingassignment.php" class="menu-item">Advising Assignments</a>
                 <a href="admin_reports.php" class="menu-item">System Reports</a>
-                <a href="admin_bulk_operations.php" class="menu-item">Bulk Operations</a>
-                <a href="admin_bulk_upload.php" class="menu-item">Bulk Operations</a>
+                <a href="admin_bulk_operations.php" class="menu-item">Bulk Ops & Uploads</a>
             </nav>
         </aside>
         
@@ -352,14 +351,13 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
         }
 
         function editCourse(courseId) {
-            const course = allCourses.find(c => c.id === courseId);
+            const course = allCourses.find(c => Number(c.id) === Number(courseId));
             if (!course) return;
             
             document.getElementById('modalTitle').textContent = 'Edit Course';
             document.getElementById('courseId').value = course.id;
             document.getElementById('courseProgram').value = course.program;
             document.getElementById('courseCode').value = course.course_code;
-            document.getElementById('courseCode').disabled = true;
             document.getElementById('courseName').value = course.course_name;
             document.getElementById('units').value = course.units;
             document.getElementById('term').value = course.term;
@@ -379,14 +377,14 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
             
             const courseId = document.getElementById('courseId').value;
             const formData = new FormData();
+            formData.append('course_code', document.getElementById('courseCode').value);
+            formData.append('program', document.getElementById('courseProgram').value || currentProgram);
             
             if (courseId) {
                 formData.append('action', 'update_course');
                 formData.append('course_id', courseId);
             } else {
                 formData.append('action', 'add_course');
-                formData.append('course_code', document.getElementById('courseCode').value);
-                formData.append('program', document.getElementById('courseProgram').value);
             }
             
             formData.append('course_name', document.getElementById('courseName').value);

@@ -5,6 +5,15 @@ define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_NAME', 'academic_advising');
 
+// Mailer configuration (override via environment variables in production)
+define('MAILER_HOST', getenv('SMTP_HOST') ?: 'smtp.gmail.com');
+define('MAILER_PORT', getenv('SMTP_PORT') ?: 587);
+define('MAILER_USERNAME', getenv('SMTP_USERNAME') ?: 'christianjohnalado@gmail.com');
+define('MAILER_PASSWORD', getenv('SMTP_PASSWORD') ?: 'vvjk hrfj rhhy wytd');
+define('MAILER_ENCRYPTION', getenv('SMTP_ENCRYPTION') ?: 'tls'); // 'tls' or 'ssl'
+define('MAILER_FROM_EMAIL', getenv('SMTP_FROM_EMAIL') ?: 'christianjohnalado@gmail.com');
+define('MAILER_FROM_NAME', getenv('SMTP_FROM_NAME') ?: 'Academic Advising');
+
 // File upload configuration
 define('UPLOAD_DIR', __DIR__ . '/uploads/');
 define('MAX_FILE_SIZE', 10485760); // 10MB

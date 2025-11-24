@@ -490,34 +490,64 @@ function getDashboardStats() {
         $professor_progress[] = $row;
     }
     
-    // Current term enrollment stats (mock for now - will be real when students submit)
-    $result = $conn->query("
-        SELECT cs.subject_code, COUNT(DISTINCT sp.student_id) as student_count
-        FROM study_plans sp
-        JOIN current_subjects cs ON cs.study_plan_id = sp.id
-        WHERE sp.academic_year = '2024-2025' AND sp.term = 'Term 2'
-        GROUP BY cs.subject_code
-        ORDER BY student_count DESC
-        LIMIT 5
+    // Determine the most recent study plan window to drive enrollment insights
+    $latestPlanResult = $conn->query("
+        SELECT academic_year, term 
+        FROM study_plans 
+        WHERE status IN ('pending', 'approved')
+        ORDER BY updated_at DESC 
+        LIMIT 1
     ");
-    $current_enrollment = [];
-    while ($row = $result->fetch_assoc()) {
-        $current_enrollment[] = $row;
-    }
+    $latestPlan = $latestPlanResult && $latestPlanResult->num_rows > 0
+        ? $latestPlanResult->fetch_assoc()
+        : null;
     
-    // Planned enrollment stats
-    $result = $conn->query("
-        SELECT ps.subject_code, COUNT(DISTINCT sp.student_id) as student_count
-        FROM study_plans sp
-        JOIN planned_subjects ps ON ps.study_plan_id = sp.id
-        WHERE sp.academic_year = '2024-2025' AND sp.term = 'Term 2'
-        GROUP BY ps.subject_code
-        ORDER BY student_count DESC
-        LIMIT 5
-    ");
+    $current_enrollment = [];
     $planned_enrollment = [];
-    while ($row = $result->fetch_assoc()) {
-        $planned_enrollment[] = $row;
+    
+    if ($latestPlan) {
+        $academicYear = $latestPlan['academic_year'];
+        $term = $latestPlan['term'];
+        
+        // Current term enrollment stats
+        $stmt = $conn->prepare("
+            SELECT cs.subject_code, COUNT(DISTINCT sp.student_id) as student_count
+            FROM study_plans sp
+            JOIN current_subjects cs ON cs.study_plan_id = sp.id
+            WHERE sp.academic_year = ? 
+              AND sp.term = ? 
+              AND sp.status IN ('pending', 'approved')
+            GROUP BY cs.subject_code
+            ORDER BY student_count DESC
+            LIMIT 5
+        ");
+        $stmt->bind_param("ss", $academicYear, $term);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $current_enrollment[] = $row;
+        }
+        $stmt->close();
+        
+        // Planned enrollment stats
+        $stmt = $conn->prepare("
+            SELECT ps.subject_code, COUNT(DISTINCT sp.student_id) as student_count
+            FROM study_plans sp
+            JOIN planned_subjects ps ON ps.study_plan_id = sp.id
+            WHERE sp.academic_year = ? 
+              AND sp.term = ? 
+              AND sp.status IN ('pending', 'approved')
+            GROUP BY ps.subject_code
+            ORDER BY student_count DESC
+            LIMIT 5
+        ");
+        $stmt->bind_param("ss", $academicYear, $term);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $planned_enrollment[] = $row;
+        }
+        $stmt->close();
     }
     
     echo json_encode([
@@ -703,19 +733,37 @@ function deleteStudent() {
 function getProfessorsList() {
     global $conn;
     
-    $result = $conn->query("
+    $search = $_GET['search'] ?? '';
+    $query = "
         SELECT 
             p.id,
             p.id_number,
             CONCAT(p.first_name, ' ', p.middle_name, ' ', p.last_name) as full_name,
             p.department,
             p.email,
-            COUNT(s.id) as advisee_count
+            COUNT(s.id) as advisee_count,
+            COALESCE(SUM(CASE WHEN s.advising_cleared = 1 THEN 1 ELSE 0 END), 0) as completed_advisees,
+            COALESCE(SUM(CASE WHEN s.advising_cleared = 0 AND s.id IS NOT NULL THEN 1 ELSE 0 END), 0) as pending_advisees
         FROM professors p
         LEFT JOIN students s ON s.advisor_id = p.id
-        GROUP BY p.id
-        ORDER BY p.id_number
-    ");
+        WHERE 1=1
+    ";
+    
+    if ($search) {
+        $safeSearch = $conn->real_escape_string($search);
+        $query .= "
+            AND (
+                p.id_number LIKE '%$safeSearch%' OR
+                p.first_name LIKE '%$safeSearch%' OR
+                p.last_name LIKE '%$safeSearch%' OR
+                p.email LIKE '%$safeSearch%'
+            )
+        ";
+    }
+    
+    $query .= " GROUP BY p.id ORDER BY p.id_number";
+    
+    $result = $conn->query($query);
     
     $professors = [];
     while ($row = $result->fetch_assoc()) {
@@ -956,15 +1004,17 @@ function updateCourse() {
     global $conn;
     
     $course_id = $_POST['course_id'];
+    $course_code = $_POST['course_code'];
     $course_name = $_POST['course_name'];
     $units = $_POST['units'];
+    $program = $_POST['program'];
     $term = $_POST['term'];
     $course_type = $_POST['course_type'];
     $prerequisites = $_POST['prerequisites'] ?? '';
     
     try {
-        $stmt = $conn->prepare("UPDATE course_catalog SET course_name = ?, units = ?, term = ?, course_type = ?, prerequisites = ? WHERE id = ?");
-        $stmt->bind_param("sisssi", $course_name, $units, $term, $course_type, $prerequisites, $course_id);
+        $stmt = $conn->prepare("UPDATE course_catalog SET course_code = ?, course_name = ?, units = ?, program = ?, term = ?, course_type = ?, prerequisites = ? WHERE id = ?");
+        $stmt->bind_param("ssissssi", $course_code, $course_name, $units, $program, $term, $course_type, $prerequisites, $course_id);
         $stmt->execute();
         
         echo json_encode(['success' => true, 'message' => 'Course updated successfully']);

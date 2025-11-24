@@ -87,6 +87,38 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
         
         .template-download { display: inline-block; padding: 8px 16px; background: #95a5a6; color: white; border-radius: 5px; text-decoration: none; font-size: 13px; margin-bottom: 15px; }
         .template-download:hover { background: #7f8c8d; }
+        .bulk-upload-section { margin-top: 40px; }
+        .bulk-upload-heading { color: #2c3e50; margin-bottom: 10px; }
+        .bulk-upload-subtitle { color: #666; margin-bottom: 20px; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; flex-wrap: wrap; }
+        .tab-btn { padding: 10px 22px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 15px; font-weight: 600; color: #666; transition: all 0.3s; }
+        .tab-btn.active { color: #3498db; border-bottom-color: #3498db; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .content-card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        .content-card h2 { font-size: 22px; color: #2c3e50; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        .upload-section { margin-top: 10px; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 2px dashed #ddd; }
+        .upload-section h3 { font-size: 18px; color: #2c3e50; margin-bottom: 15px; }
+        .upload-section p { color: #666; margin-bottom: 15px; font-size: 14px; }
+        .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; margin-top: 10px; }
+        .file-input-wrapper input[type="file"] { position: absolute; left: -9999px; }
+        .file-input-label { padding: 10px 20px; background: #3498db; color: white; border-radius: 5px; cursor: pointer; display: inline-block; font-size: 14px; }
+        .file-input-label:hover { background: #2980b9; }
+        .selected-file { margin: 10px 0; color: #555; font-size: 14px; }
+        .btn-upload { padding: 10px 24px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; margin-top: 10px; }
+        .btn-upload:hover { background: #1f8c4c; }
+        .btn-upload:disabled { background: #ccc; cursor: not-allowed; }
+        .download-template { color: #3498db; text-decoration: none; font-size: 14px; margin-left: 15px; }
+        .download-template:hover { text-decoration: underline; }
+        .result-box { margin-top: 20px; padding: 15px; border-radius: 5px; display: none; }
+        .result-box.success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .result-box.error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .result-details { margin-top: 10px; font-size: 13px; }
+        .error-list { max-height: 200px; overflow-y: auto; margin-top: 10px; }
+        .error-item { padding: 5px; background: white; margin: 5px 0; border-radius: 3px; font-size: 12px; }
+        .format-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+        .format-table th, .format-table td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+        .format-table th { background: #f0f0f0; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -102,8 +134,7 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
                 <a href="admin_courses.php" class="menu-item">Course Catalog</a>
                 <a href="admin_advisingassignment.php" class="menu-item">Advising Assignments</a>
                 <a href="admin_reports.php" class="menu-item">System Reports</a>
-                <a href="admin_bulk_operations.php" class="menu-item">Bulk Operations</a>
-                <a href="admin_bulk_upload.php" class="menu-item">Bulk Operations</a>
+                <a href="admin_bulk_operations.php" class="menu-item">Bulk Ops & Uploads</a>
             </nav>
         </aside>
         
@@ -114,104 +145,6 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
             </div>
             
             <div class="operations-grid">
-                <!-- Bulk Grade Upload -->
-                <div class="operation-card">
-                    <h3><span class="operation-icon">📊</span> Bulk Grade Upload</h3>
-                    <p class="operation-description">
-                        Upload multiple student grades at once using a CSV file. Perfect for end-of-term grade submissions.
-                    </p>
-                    
-                    <a href="templates/grades_template.csv" class="template-download" download>📥 Download CSV Template</a>
-                    
-                    <div id="gradeAlert"></div>
-                    
-                    <form id="gradeUploadForm">
-                        <div class="form-group">
-                            <label>Academic Year *</label>
-                            <input type="text" id="gradeYear" placeholder="e.g., 2024-2025" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Term *</label>
-                            <select id="gradeTerm" required>
-                                <option value="">Select term...</option>
-                                <option value="1">Term 1</option>
-                                <option value="2">Term 2</option>
-                                <option value="3">Term 3</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>CSV File *</label>
-                            <input type="file" id="gradeFile" accept=".csv" required>
-                            <div class="help-text">Format: student_id, course_code, grade, is_failed</div>
-                        </div>
-                        
-                        <button type="button" class="btn btn-primary" onclick="uploadGrades()">Upload Grades</button>
-                    </form>
-                    
-                    <div class="progress-container" id="gradeProgress">
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="gradeProgressFill">0%</div>
-                        </div>
-                    </div>
-                    
-                    <div class="result-box" id="gradeResult"></div>
-                </div>
-                
-                <!-- Bulk GPA Calculation -->
-                <div class="operation-card">
-                    <h3><span class="operation-icon">🧮</span> Bulk GPA Calculation</h3>
-                    <p class="operation-description">
-                        Automatically calculate GPA for all students or specific programs. Updates term GPA and cumulative GPA.
-                    </p>
-                    
-                    <div id="gpaAlert"></div>
-                    
-                    <form id="gpaCalculationForm">
-                        <div class="form-group">
-                            <label>Academic Year *</label>
-                            <input type="text" id="gpaYear" placeholder="e.g., 2024-2025" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Term *</label>
-                            <select id="gpaTerm" required>
-                                <option value="">Select term...</option>
-                                <option value="1">Term 1</option>
-                                <option value="2">Term 2</option>
-                                <option value="3">Term 3</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Program</label>
-                            <select id="gpaProgram">
-                                <option value="">All Programs</option>
-                                <option value="BS Computer Engineering">BSCpE</option>
-                                <option value="BS Electronics and Communications Engineering">BSECE</option>
-                                <option value="BS Electrical Engineering">BSEE</option>
-                            </select>
-                            <div class="help-text">Leave empty to calculate for all programs</div>
-                        </div>
-                        
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="gpaRecalculate">
-                            <label for="gpaRecalculate">Recalculate existing GPAs</label>
-                        </div>
-                        
-                        <button type="button" class="btn btn-success" onclick="calculateGPA()">Calculate GPA</button>
-                    </form>
-                    
-                    <div class="progress-container" id="gpaProgress">
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="gpaProgressFill">0%</div>
-                        </div>
-                    </div>
-                    
-                    <div class="result-box" id="gpaResult"></div>
-                </div>
-                
                 <!-- Bulk Clearance Management -->
                 <div class="operation-card">
                     <h3><span class="operation-icon">✅</span> Bulk Clearance Management</h3>
@@ -336,14 +269,174 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
                     <div class="result-box" id="emailResult"></div>
                 </div>
             </div>
+
+            <section class="bulk-upload-section">
+                <h2 class="bulk-upload-heading">Bulk Upload Center</h2>
+                <p class="bulk-upload-subtitle">Import students, professors, and courses via CSV templates for faster onboarding.</p>
+                
+                <div class="tabs">
+                    <button class="tab-btn active" data-upload-tab="students" onclick="switchUploadTab('students')">Upload Students</button>
+                    <button class="tab-btn" data-upload-tab="professors" onclick="switchUploadTab('professors')">Upload Professors</button>
+                    <button class="tab-btn" data-upload-tab="courses" onclick="switchUploadTab('courses')">Upload Courses</button>
+                </div>
+                
+                <!-- Students Upload Tab -->
+                <div id="students" class="tab-content active">
+                    <div class="content-card">
+                        <h2>Bulk Upload Students</h2>
+                        <div class="upload-section">
+                            <h3>📊 Upload Student List (CSV)</h3>
+                            <p>Upload a CSV file containing student information. Default password will be set to their ID number.</p>
+                            
+                            <a href="templates/students_template.csv" class="download-template" download>⬇ Download CSV Template</a>
+                            
+                            <form id="studentUploadForm" enctype="multipart/form-data">
+                                <div class="file-input-wrapper">
+                                    <label class="file-input-label" for="studentFile">Choose CSV File</label>
+                                    <input type="file" id="studentFile" name="csv_file" accept=".csv" onchange="updateFileName('studentFile')">
+                                </div>
+                                <div class="selected-file" id="studentFileName"></div>
+                                <button type="submit" class="btn-upload">Upload Students</button>
+                            </form>
+                            
+                            <div id="studentResult" class="result-box"></div>
+                            
+                            <details style="margin-top: 20px;">
+                                <summary style="cursor: pointer; font-weight: 600; color: #555;">CSV Format Requirements</summary>
+                                <table class="format-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Column</th>
+                                            <th>Description</th>
+                                            <th>Example</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td>id_number</td><td>Student ID (numbers only)</td><td>12012345</td></tr>
+                                        <tr><td>first_name</td><td>First name</td><td>Juan</td></tr>
+                                        <tr><td>middle_name</td><td>Middle name (optional)</td><td>Santos</td></tr>
+                                        <tr><td>last_name</td><td>Last name</td><td>Dela Cruz</td></tr>
+                                        <tr><td>college</td><td>College name</td><td>Gokongwei College of Engineering</td></tr>
+                                        <tr><td>department</td><td>Department name</td><td>GCOE-ECEE</td></tr>
+                                        <tr><td>program</td><td>Program name</td><td>BS Computer Engineering</td></tr>
+                                        <tr><td>specialization</td><td>Specialization (optional)</td><td>N/A</td></tr>
+                                        <tr><td>phone_number</td><td>Contact number</td><td>+63 917 123 4567</td></tr>
+                                        <tr><td>email</td><td>Email address</td><td>juan_delacruz@dlsu.edu.ph</td></tr>
+                                        <tr><td>parent_guardian_name</td><td>Parent/Guardian name</td><td>Maria Dela Cruz</td></tr>
+                                        <tr><td>parent_guardian_number</td><td>Parent/Guardian contact</td><td>+63 918 765 4321</td></tr>
+                                    </tbody>
+                                </table>
+                            </details>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Professors Upload Tab -->
+                <div id="professors" class="tab-content">
+                    <div class="content-card">
+                        <h2>Bulk Upload Professors</h2>
+                        <div class="upload-section">
+                            <h3>📊 Upload Professor List (CSV)</h3>
+                            <p>Upload a CSV file containing professor information. Default password will be set to their ID number.</p>
+                            
+                            <a href="templates/professors_template.csv" class="download-template" download>⬇ Download CSV Template</a>
+                            
+                            <form id="professorUploadForm" enctype="multipart/form-data">
+                                <div class="file-input-wrapper">
+                                    <label class="file-input-label" for="professorFile">Choose CSV File</label>
+                                    <input type="file" id="professorFile" name="csv_file" accept=".csv" onchange="updateFileName('professorFile')">
+                                </div>
+                                <div class="selected-file" id="professorFileName"></div>
+                                <button type="submit" class="btn-upload">Upload Professors</button>
+                            </form>
+                            
+                            <div id="professorResult" class="result-box"></div>
+                            
+                            <details style="margin-top: 20px;">
+                                <summary style="cursor: pointer; font-weight: 600; color: #555;">CSV Format Requirements</summary>
+                                <table class="format-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Column</th>
+                                            <th>Description</th>
+                                            <th>Example</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td>id_number</td><td>Professor ID (numbers only)</td><td>10012345</td></tr>
+                                        <tr><td>first_name</td><td>First name</td><td>Maria</td></tr>
+                                        <tr><td>middle_name</td><td>Middle name (optional)</td><td>Santos</td></tr>
+                                        <tr><td>last_name</td><td>Last name</td><td>Garcia</td></tr>
+                                        <tr><td>department</td><td>Department name</td><td>GCOE-ECEE</td></tr>
+                                        <tr><td>email</td><td>Email address</td><td>maria.garcia@dlsu.edu.ph</td></tr>
+                                    </tbody>
+                                </table>
+                            </details>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Courses Upload Tab -->
+                <div id="courses" class="tab-content">
+                    <div class="content-card">
+                        <h2>Bulk Upload Courses</h2>
+                        <div class="upload-section">
+                            <h3>📊 Upload Course Catalog (CSV)</h3>
+                            <p>Upload a CSV file containing course information for the catalog.</p>
+                            
+                            <a href="templates/courses_template.csv" class="download-template" download>⬇ Download CSV Template</a>
+                            
+                            <form id="courseUploadForm" enctype="multipart/form-data">
+                                <div class="file-input-wrapper">
+                                    <label class="file-input-label" for="courseFile">Choose CSV File</label>
+                                    <input type="file" id="courseFile" name="csv_file" accept=".csv" onchange="updateFileName('courseFile')">
+                                </div>
+                                <div class="selected-file" id="courseFileName"></div>
+                                <button type="submit" class="btn-upload">Upload Courses</button>
+                            </form>
+                            
+                            <div id="courseResult" class="result-box"></div>
+                            
+                            <details style="margin-top: 20px;">
+                                <summary style="cursor: pointer; font-weight: 600; color: #555;">CSV Format Requirements</summary>
+                                <table class="format-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Column</th>
+                                            <th>Description</th>
+                                            <th>Example</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td>course_code</td><td>Unique course code</td><td>CSSWENG</td></tr>
+                                        <tr><td>course_name</td><td>Full course name</td><td>Software Engineering</td></tr>
+                                        <tr><td>units</td><td>Number of units</td><td>3</td></tr>
+                                        <tr><td>program</td><td>Program name</td><td>BS Computer Engineering</td></tr>
+                                        <tr><td>term</td><td>Term (Term 1 to Term 12)</td><td>Term 2</td></tr>
+                                        <tr><td>course_type</td><td>Type: major, minor, elective, general_education</td><td>major</td></tr>
+                                        <tr><td>prerequisites</td><td>Format: COURSECODE(TYPE) with TYPE as H/S/C, separated by commas</td><td>FNDMATH(H),PROLOGI(S)</td></tr>
+                                    </tbody>
+                                </table>
+                                <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 5px; font-size: 13px;">
+                                    <strong>Prerequisite Types:</strong><br>
+                                    • <strong>H</strong> = Hard-Prerequisite<br>
+                                    • <strong>S</strong> = Soft-Prerequisite<br>
+                                    • <strong>C</strong> = Co-requisite<br>
+                                    <strong>Example:</strong> "FNDMATH(H),PROLOGI(S)" or "PROLOGI(C)"
+                                </div>
+                            </details>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 
     <script>
         // Load advisers on page load
-        window.onload = function() {
+        document.addEventListener('DOMContentLoaded', function() {
             loadAdvisers();
-        };
+        });
 
         // Show/hide conditional fields
         document.getElementById('clearanceTarget')?.addEventListener('change', function() {
@@ -374,94 +467,12 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
                 });
         }
 
-        function uploadGrades() {
-            const year = document.getElementById('gradeYear').value;
-            const term = document.getElementById('gradeTerm').value;
-            const file = document.getElementById('gradeFile').files[0];
-            
-            if (!year || !term || !file) {
-                showAlert('gradeAlert', 'Please fill all required fields', 'danger');
-                return;
-            }
-            
-            const formData = new FormData();
-            formData.append('action', 'upload_grades');
-            formData.append('academic_year', year);
-            formData.append('term', term);
-            formData.append('file', file);
-            
-            showProgress('gradeProgress', 'gradeProgressFill');
-            
-            fetch('admin_bulk_operations_api.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                hideProgress('gradeProgress');
-                if (data.success) {
-                    showAlert('gradeAlert', data.message, 'success');
-                    showResult('gradeResult', data.stats);
-                } else {
-                    showAlert('gradeAlert', 'Error: ' + data.message, 'danger');
-                }
-            })
-            .catch(error => {
-                hideProgress('gradeProgress');
-                showAlert('gradeAlert', 'Error uploading grades', 'danger');
-            });
-        }
-
-        function calculateGPA() {
-            const year = document.getElementById('gpaYear').value;
-            const term = document.getElementById('gpaTerm').value;
-            const program = document.getElementById('gpaProgram').value;
-            const recalculate = document.getElementById('gpaRecalculate').checked ? 1 : 0;
-            
-            if (!year || !term) {
-                showAlert('gpaAlert', 'Please fill all required fields', 'danger');
-                return;
-            }
-            
-            if (!confirm('This will calculate GPA for all matching students. Continue?')) {
-                return;
-            }
-            
-            const formData = new FormData();
-            formData.append('action', 'calculate_gpa');
-            formData.append('academic_year', year);
-            formData.append('term', term);
-            formData.append('program', program);
-            formData.append('recalculate', recalculate);
-            
-            showProgress('gpaProgress', 'gpaProgressFill');
-            
-            fetch('admin_bulk_operations_api.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                hideProgress('gpaProgress');
-                if (data.success) {
-                    showAlert('gpaAlert', data.message, 'success');
-                    showResult('gpaResult', data.stats);
-                } else {
-                    showAlert('gpaAlert', 'Error: ' + data.message, 'danger');
-                }
-            })
-            .catch(error => {
-                hideProgress('gpaProgress');
-                showAlert('gpaAlert', 'Error calculating GPA', 'danger');
-            });
-        }
-
         function performClearance() {
             const action = document.getElementById('clearanceAction').value;
             const target = document.getElementById('clearanceTarget').value;
-            const confirm = document.getElementById('clearanceConfirm').checked;
+            const confirmationChecked = document.getElementById('clearanceConfirm').checked;
             
-            if (!action || !target || !confirm) {
+            if (!action || !target || !confirmationChecked) {
                 showAlert('clearanceAlert', 'Please complete all required fields', 'danger');
                 return;
             }
@@ -479,7 +490,7 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
                 formData.append('student_list', document.getElementById('clearanceList').value);
             }
             
-            if (!confirm(`This will ${action} students. Continue?`)) {
+            if (!window.confirm(`This will ${action} students. Continue?`)) {
                 return;
             }
             
@@ -536,11 +547,12 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
             .then(response => response.json())
             .then(data => {
                 hideProgress('emailProgress');
-                if (data.success) {
-                    showAlert('emailAlert', data.message, 'success');
+                const alertType = data.success ? 'success' : 'danger';
+                showAlert('emailAlert', data.message || 'Unknown response', alertType);
+                
+                if (data.stats) {
                     showResult('emailResult', data.stats);
-                } else {
-                    showAlert('emailAlert', 'Error: ' + data.message, 'danger');
+                    renderErrorList('emailResult', data.errors);
                 }
             })
             .catch(error => {
@@ -590,6 +602,163 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
             container.innerHTML = html;
             container.style.display = 'block';
         }
+
+        function renderErrorList(containerId, errors) {
+            if (!errors || errors.length === 0) {
+                return;
+            }
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            const list = document.createElement('div');
+            list.className = 'error-list';
+            list.innerHTML = '<strong>Details:</strong>';
+            errors.forEach(err => {
+                const item = document.createElement('div');
+                item.className = 'error-item';
+                item.textContent = err;
+                list.appendChild(item);
+            });
+            container.appendChild(list);
+        }
+
+        function switchUploadTab(tabName) {
+            document.querySelectorAll('.bulk-upload-section .tab-content').forEach(tab => tab.classList.remove('active'));
+            const target = document.getElementById(tabName);
+            if (target) {
+                target.classList.add('active');
+            }
+            document.querySelectorAll('.bulk-upload-section .tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.uploadTab === tabName);
+            });
+        }
+
+        function updateFileName(inputId) {
+            const input = document.getElementById(inputId);
+            const fileNameDiv = document.getElementById(inputId + 'Name');
+            if (!input || !fileNameDiv) return;
+            fileNameDiv.textContent = input.files.length > 0 ? '📄 ' + input.files[0].name : '';
+        }
+
+        document.getElementById('studentUploadForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            formData.append('action', 'bulk_upload_students');
+            const resultDiv = document.getElementById('studentResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result-box';
+            resultDiv.innerHTML = 'Uploading... Please wait.';
+            
+            fetch('admin_api.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    resultDiv.className = 'result-box success';
+                    let html = `<strong>✓ Upload Successful!</strong><div class="result-details">`;
+                    html += `Total: ${data.total} | Successful: ${data.successful} | Failed: ${data.failed}</div>`;
+                    if (data.errors.length > 0) {
+                        html += `<div class="error-list"><strong>Errors:</strong>`;
+                        data.errors.forEach(err => {
+                            html += `<div class="error-item">${err}</div>`;
+                        });
+                        html += `</div>`;
+                    }
+                    resultDiv.innerHTML = html;
+                    this.reset();
+                    document.getElementById('studentFileName').textContent = '';
+                } else {
+                    resultDiv.className = 'result-box error';
+                    resultDiv.innerHTML = `<strong>✗ Upload Failed</strong><div class="result-details">${data.message}</div>`;
+                }
+            })
+            .catch(error => {
+                resultDiv.className = 'result-box error';
+                resultDiv.innerHTML = `<strong>✗ Error</strong><div class="result-details">${error.message}</div>`;
+            });
+        });
+
+        document.getElementById('professorUploadForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            formData.append('action', 'bulk_upload_professors');
+            const resultDiv = document.getElementById('professorResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result-box';
+            resultDiv.innerHTML = 'Uploading... Please wait.';
+            
+            fetch('admin_api.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    resultDiv.className = 'result-box success';
+                    let html = `<strong>✓ Upload Successful!</strong><div class="result-details">`;
+                    html += `Total: ${data.total} | Successful: ${data.successful} | Failed: ${data.failed}</div>`;
+                    if (data.errors.length > 0) {
+                        html += `<div class="error-list"><strong>Errors:</strong>`;
+                        data.errors.forEach(err => {
+                            html += `<div class="error-item">${err}</div>`;
+                        });
+                        html += `</div>`;
+                    }
+                    resultDiv.innerHTML = html;
+                    this.reset();
+                    document.getElementById('professorFileName').textContent = '';
+                } else {
+                    resultDiv.className = 'result-box error';
+                    resultDiv.innerHTML = `<strong>✗ Upload Failed</strong><div class="result-details">${data.message}</div>`;
+                }
+            })
+            .catch(error => {
+                resultDiv.className = 'result-box error';
+                resultDiv.innerHTML = `<strong>✗ Error</strong><div class="result-details">${error.message}</div>`;
+            });
+        });
+
+        document.getElementById('courseUploadForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            formData.append('action', 'bulk_upload_courses');
+            const resultDiv = document.getElementById('courseResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result-box';
+            resultDiv.innerHTML = 'Uploading... Please wait.';
+            
+            fetch('admin_api.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    resultDiv.className = 'result-box success';
+                    let html = `<strong>✓ Upload Successful!</strong><div class="result-details">`;
+                    html += `Total: ${data.total} | Successful: ${data.successful} | Failed: ${data.failed}</div>`;
+                    if (data.errors.length > 0) {
+                        html += `<div class="error-list"><strong>Errors:</strong>`;
+                        data.errors.forEach(err => {
+                            html += `<div class="error-item">${err}</div>`;
+                        });
+                        html += `</div>`;
+                    }
+                    resultDiv.innerHTML = html;
+                    this.reset();
+                    document.getElementById('courseFileName').textContent = '';
+                } else {
+                    resultDiv.className = 'result-box error';
+                    resultDiv.innerHTML = `<strong>✗ Upload Failed</strong><div class="result-details">${data.message}</div>`;
+                }
+            })
+            .catch(error => {
+                resultDiv.className = 'result-box error';
+                resultDiv.innerHTML = `<strong>✗ Error</strong><div class="result-details">${error.message}</div>`;
+            });
+        });
     </script>
 </body>
 </html>
