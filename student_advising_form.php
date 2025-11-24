@@ -20,6 +20,13 @@ $stmt = $conn->prepare("
 $stmt->bind_param("i", $student_id);
 $stmt->execute();
 $student = $stmt->get_result()->fetch_assoc();
+
+// Get Course Catalog for Dropdowns
+$course_catalog = [];
+$course_query = $conn->query("SELECT course_code, course_name, units FROM course_catalog WHERE is_active = 1 ORDER BY course_code ASC");
+while($row = $course_query->fetch_assoc()) {
+    $course_catalog[] = $row;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -209,13 +216,13 @@ $student = $stmt->get_result()->fetch_assoc();
                             </div>
                             <div class="form-group">
                                 <label>Previous Term GPA</label>
-                                <input type="number" id="previousTermGPA" min="0" max="4" step="0.01" placeholder="0.00">
-                                <div class="help-text">GPA from previous term (0.00 - 4.00)</div>
+                                <input type="number" id="previousTermGPA" min="0" max="4" step="0.001" placeholder="0.000">
+                                <div class="help-text">GPA from previous term (0.000 - 4.000)</div>
                             </div>
                             <div class="form-group">
                                 <label>Cumulative GPA</label>
-                                <input type="number" id="cumulativeGPA" min="0" max="4" step="0.01" placeholder="0.00">
-                                <div class="help-text">Overall cumulative GPA (0.00 - 4.00)</div>
+                                <input type="number" id="cumulativeGPA" min="0" max="4" step="0.001" placeholder="0.000">
+                                <div class="help-text">Overall cumulative GPA (0.000 - 4.000)</div>
                             </div>
                         </div>
                         
@@ -253,26 +260,8 @@ $student = $stmt->get_result()->fetch_assoc();
                         <div id="currentCoursesContainer" class="course-entry-container"></div>
                         <button type="button" class="add-course-btn" onclick="addCurrentCourse()">+ Add Current Course</button>
                         
-                        <!-- Academic Advising Booklet -->
-                        <h4 class="section-header">Academic Advising Booklet</h4>
-                        <div class="form-group">
-                            <label>Updated Academic Advising Booklet *</label>
-                            <div class="file-upload" onclick="document.getElementById('bookletFile').click()">
-                                <input type="file" id="bookletFile" accept=".pdf,.doc,.docx" required>
-                                <label class="file-upload-label">
-                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                        <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
-                                    </svg>
-                                    <p style="margin-top: 10px; font-weight: 600;">Click to upload booklet</p>
-                                    <p style="font-size: 12px; color: #999; margin-top: 5px;">Supported: PDF, DOC, DOCX (Max 10MB)</p>
-                                </label>
-                            </div>
-                            <div id="bookletPreview" class="file-preview" style="display: none;"></div>
-                        </div>
-                        
                         <!-- Additional Notes -->
-                        <div class="form-group">
+                        <div class="form-group" style="margin-top: 30px;">
                             <label>Additional Notes/Concerns (Optional)</label>
                             <textarea id="additionalNotes" placeholder="Any concerns, questions, or additional information you'd like to share with your adviser..."></textarea>
                         </div>
@@ -315,21 +304,41 @@ $student = $stmt->get_result()->fetch_assoc();
 
     <script>
         let currentCourseCount = 0;
+        // Course Catalog Data
+        const courseCatalog = <?php echo json_encode($course_catalog); ?>;
         
+        // Helper to generate Course Options
+        function getCourseOptionsHtml() {
+            let options = '<option value="">Select Course...</option>';
+            courseCatalog.forEach(course => {
+                options += `<option value="${course.course_code}">${course.course_code} - ${course.course_name}</option>`;
+            });
+            return options;
+        }
+
+        // Handle Course Selection Change
+        function onCourseSelect(selectElement, id) {
+            const selectedCode = selectElement.value;
+            const nameInput = document.querySelector(`input[name="courseName_${id}"]`);
+            const unitsInput = document.querySelector(`input[name="courseUnits_${id}"]`);
+            
+            if (selectedCode) {
+                const course = courseCatalog.find(c => c.course_code === selectedCode);
+                if (course) {
+                    nameInput.value = course.course_name;
+                    unitsInput.value = course.units;
+                }
+            } else {
+                nameInput.value = '';
+                unitsInput.value = '';
+            }
+        }
+
         // File upload preview handlers
         document.getElementById('gradeScreenshot').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
                 const preview = document.getElementById('filePreview');
-                preview.style.display = 'block';
-                preview.innerHTML = `📄 ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
-            }
-        });
-        
-        document.getElementById('bookletFile').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const preview = document.getElementById('bookletPreview');
                 preview.style.display = 'block';
                 preview.innerHTML = `📄 ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
             }
@@ -355,21 +364,28 @@ $student = $stmt->get_result()->fetch_assoc();
             const courseDiv = document.createElement('div');
             courseDiv.className = 'course-entry';
             courseDiv.id = `course-${currentCourseCount}`;
+            
+            const courseOptions = getCourseOptionsHtml();
+
             courseDiv.innerHTML = `
                 <button type="button" class="remove-course-btn" onclick="removeCourse(${currentCourseCount})">Remove</button>
                 <h4>Course ${currentCourseCount}</h4>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Course Code *</label>
-                        <input type="text" name="courseCode[]" placeholder="e.g., CSALGCM" required>
+                        <select name="courseCode[]" required onchange="onCourseSelect(this, ${currentCourseCount})">
+                            ${courseOptions}
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Course Name *</label>
-                        <input type="text" name="courseName[]" placeholder="e.g., Algorithms and Complexity" required>
+                        <input type="text" name="courseName_${currentCourseCount}" readonly style="background-color: #e9ecef;" placeholder="Auto-filled">
+                        <input type="hidden" name="courseName[]"> <!-- Hidden input for array submission if needed -->
                     </div>
                     <div class="form-group">
                         <label>Units *</label>
-                        <input type="number" name="courseUnits[]" min="1" step="1" placeholder="3" required>
+                        <input type="number" name="courseUnits_${currentCourseCount}" min="0" step="1" placeholder="0" required>
+                        <input type="hidden" name="courseUnits[]"> <!-- Hidden input wrapper handled below -->
                     </div>
                 </div>
                 <div class="prerequisite-container">
@@ -377,7 +393,9 @@ $student = $stmt->get_result()->fetch_assoc();
                     <div id="prereq-container-${currentCourseCount}">
                         <div class="prerequisite-entry">
                             <div>
-                                <input type="text" name="prereqCode_${currentCourseCount}[]" placeholder="Prerequisite Code (or NONE)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <select name="prereqCode_${currentCourseCount}[]" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                    ${courseOptions.replace('Select Course...', 'Select Prerequisite (or NONE)')}
+                                </select>
                             </div>
                             <div>
                                 <select name="prereqType_${currentCourseCount}[]" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
@@ -410,10 +428,14 @@ $student = $stmt->get_result()->fetch_assoc();
         function addPrerequisite(courseId) {
             const container = document.getElementById(`prereq-container-${courseId}`);
             const prereqDiv = document.createElement('div');
+            const courseOptions = getCourseOptionsHtml();
+            
             prereqDiv.className = 'prerequisite-entry';
             prereqDiv.innerHTML = `
                 <div>
-                    <input type="text" name="prereqCode_${courseId}[]" placeholder="Prerequisite Code" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <select name="prereqCode_${courseId}[]" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        ${courseOptions.replace('Select Course...', 'Select Prerequisite')}
+                    </select>
                 </div>
                 <div>
                     <select name="prereqType_${courseId}[]" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
@@ -439,26 +461,15 @@ $student = $stmt->get_result()->fetch_assoc();
             
             // Validate files
             const gradeScreenshot = document.getElementById('gradeScreenshot').files[0];
-            const bookletFile = document.getElementById('bookletFile').files[0];
             
             if (!gradeScreenshot) {
                 showAlert('Please upload grade screenshot', 'warning');
                 return;
             }
             
-            if (!bookletFile) {
-                showAlert('Please upload academic advising booklet', 'warning');
-                return;
-            }
-            
             // Check file sizes
             if (gradeScreenshot.size > 5 * 1024 * 1024) {
                 showAlert('Grade screenshot must be less than 5MB', 'danger');
-                return;
-            }
-            
-            if (bookletFile.size > 10 * 1024 * 1024) {
-                showAlert('Booklet file must be less than 10MB', 'danger');
                 return;
             }
             
@@ -478,21 +489,24 @@ $student = $stmt->get_result()->fetch_assoc();
             formData.append('certify_accuracy', document.getElementById('certifyAccuracy').checked ? '1' : '0');
             formData.append('request_meeting', document.getElementById('requestMeeting').checked ? '1' : '0');
             formData.append('grade_screenshot', gradeScreenshot);
-            formData.append('booklet_file', bookletFile);
             
             // Collect current courses
             const courses = [];
             document.querySelectorAll('.course-entry').forEach((entry, index) => {
-                const courseCode = entry.querySelector('input[name="courseCode[]"]').value;
-                const courseName = entry.querySelector('input[name="courseName[]"]').value;
-                const units = entry.querySelector('input[name="courseUnits[]"]').value;
+                // Extract ID number from element ID (course-1, course-2, etc)
+                const courseId = entry.id.split('-')[1];
+                
+                const courseCode = entry.querySelector('select[name="courseCode[]"]').value;
+                // Use the specific named inputs we created dynamically
+                const courseName = entry.querySelector(`input[name="courseName_${courseId}"]`).value;
+                const units = entry.querySelector(`input[name="courseUnits_${courseId}"]`).value;
                 
                 // Collect prerequisites for this course
-                const courseId = entry.id.split('-')[1];
                 const prereqs = [];
                 const prereqContainer = entry.querySelector(`#prereq-container-${courseId}`);
                 prereqContainer.querySelectorAll('.prerequisite-entry').forEach(prereqEntry => {
-                    const code = prereqEntry.querySelector(`input[name="prereqCode_${courseId}[]"]`).value;
+                    const codeSelect = prereqEntry.querySelector(`select[name="prereqCode_${courseId}[]"]`);
+                    const code = codeSelect ? codeSelect.value : '';
                     const type = prereqEntry.querySelector(`select[name="prereqType_${courseId}[]"]`).value;
                     const grade = prereqEntry.querySelector(`input[name="prereqGrade_${courseId}[]"]`).value;
                     
@@ -501,12 +515,14 @@ $student = $stmt->get_result()->fetch_assoc();
                     }
                 });
                 
-                courses.push({
-                    code: courseCode,
-                    name: courseName,
-                    units: units,
-                    prerequisites: prereqs
-                });
+                if(courseCode) { // Only add if code is selected
+                    courses.push({
+                        code: courseCode,
+                        name: courseName,
+                        units: units,
+                        prerequisites: prereqs
+                    });
+                }
             });
             
             formData.append('current_courses', JSON.stringify(courses));
@@ -539,8 +555,9 @@ $student = $stmt->get_result()->fetch_assoc();
             document.getElementById('advisingForm').reset();
             document.getElementById('currentCoursesContainer').innerHTML = '';
             document.getElementById('filePreview').style.display = 'none';
-            document.getElementById('bookletPreview').style.display = 'none';
             currentCourseCount = 0;
+            // Add one fresh course field
+            addCurrentCourse();
         }
         
         // Show alert
