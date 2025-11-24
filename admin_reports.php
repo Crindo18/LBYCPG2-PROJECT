@@ -436,16 +436,16 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
         .container { display: flex; min-height: 100vh; }
-        .sidebar { width: 260px; background: #2c3e50; color: white; position: fixed; height: 100vh; overflow-y: auto; }
-        .sidebar-header { padding: 25px 20px; background: #1a252f; }
+        .sidebar { width: 260px; background: #6a1b9a; color: white; position: fixed; height: 100vh; overflow-y: auto; }
+        .sidebar-header { padding: 25px 20px; background: #4a148c; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .sidebar-header h2 { font-size: 18px; margin-bottom: 5px; }
         .sidebar-header p { font-size: 13px; opacity: 0.9; }
         .sidebar-menu { padding: 20px 0; }
         .menu-item { padding: 15px 25px; color: white; text-decoration: none; display: block; transition: all 0.3s; border-left: 3px solid transparent; }
-        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #3498db; }
+        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.08); border-left-color: #BA68C8; }
         .main-content { margin-left: 260px; flex: 1; padding: 30px; width: calc(100% - 260px); }
         .top-bar { background: white; padding: 20px 30px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .top-bar h1 { font-size: 28px; color: #2c3e50; }
+        .top-bar h1 { font-size: 28px; color: #6a1b9a; }
         .logout-btn { padding: 8px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; text-decoration: none; font-size: 14px; }
         
         .tabs { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 2px solid #e0e0e0; flex-wrap: wrap; }
@@ -499,14 +499,15 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>Admin Portal</h2>
-                <p><?php echo htmlspecialchars($admin_name); ?></p>
+                <p>Academic Advising System</p>
             </div>
             <nav class="sidebar-menu">
                 <a href="admin_dashboard.php" class="menu-item">Dashboard</a>
                 <a href="admin_accounts.php" class="menu-item">User Accounts</a>
                 <a href="admin_courses.php" class="menu-item">Course Catalog</a>
+                <a href="admin_advising_forms.php" class="menu-item">Advising Forms</a>
                 <a href="admin_advisingassignment.php" class="menu-item">Advising Assignments</a>
-                <a href="admin_reports.php" class="menu-item">System Reports</a>
+                <a href="admin_reports.php" class="menu-item active">System Reports</a>
                 <a href="admin_bulk_operations.php" class="menu-item">Bulk Ops & Uploads</a>
             </nav>
         </aside>
