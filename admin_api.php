@@ -947,11 +947,17 @@ function getCourseCatalog() {
     $search = $_GET['search'] ?? '';
     $term = $_GET['term'] ?? '';
     
-    $query = "SELECT * FROM course_catalog WHERE 1=1";
+    $query = "SELECT *, 
+              CASE 
+                  WHEN program = '0' THEN 'All Programs (Shared)'
+                  ELSE program
+              END as display_program
+              FROM course_catalog WHERE is_active = 1";
     
     if ($program) {
         $program = $conn->real_escape_string($program);
-        $query .= " AND program = '$program'";
+        // Include both program-specific courses AND shared courses (program='0')
+        $query .= " AND (program = '$program' OR program = '0')";
     }
     
     if ($search) {

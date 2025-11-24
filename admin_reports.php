@@ -310,6 +310,15 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
                             <option value="Term 1">Term 1</option>
                             <option value="Term 2">Term 2</option>
                             <option value="Term 3">Term 3</option>
+                            <option value="Term 4">Term 4</option>
+                            <option value="Term 5">Term 5</option>
+                            <option value="Term 6">Term 6</option>
+                            <option value="Term 7">Term 7</option>
+                            <option value="Term 8">Term 8</option>
+                            <option value="Term 9">Term 9</option>
+                            <option value="Term 10">Term 10</option>
+                            <option value="Term 11">Term 11</option>
+                            <option value="Term 12">Term 12</option>
                         </select>
                         <button class="btn btn-primary" onclick="loadCourseEnrollment()">Apply Filters</button>
                     </div>
