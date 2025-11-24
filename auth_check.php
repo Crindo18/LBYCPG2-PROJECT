@@ -30,29 +30,37 @@ function requireAuth() {
 }
 
 /**
- * Require specific user type - redirect if wrong type
+ * Require specific user type - redirect to current page if wrong type
  */
 function requireUserType($requiredType) {
     requireAuth();
     
     if ($_SESSION['user_type'] !== $requiredType) {
-        // User is logged in but wrong type - redirect to their dashboard
+        // User is logged in but wrong type - redirect back to current page
+        // This prevents cross-role access (e.g., student trying to access admin pages)
+        $current_page = $_SERVER['PHP_SELF'];
+        $redirect_page = '';
+        
         switch ($_SESSION['user_type']) {
             case 'admin':
-                header('Location: admin_dashboard.php');
-                exit();
+                $redirect_page = 'admin_dashboard.php';
+                break;
             case 'professor':
-                header('Location: prof_dashboard.php');
-                exit();
+                $redirect_page = 'prof_dashboard.php';
+                break;
             case 'student':
-                header('Location: student_dashboard.php');
-                exit();
+                $redirect_page = 'student_dashboard.php';
+                break;
             default:
                 // Invalid user type - logout and redirect to login
                 session_destroy();
                 header('Location: login.php');
                 exit();
         }
+        
+        // Redirect to their dashboard (not allowing cross-role access)
+        header('Location: ' . $redirect_page);
+        exit();
     }
 }
 

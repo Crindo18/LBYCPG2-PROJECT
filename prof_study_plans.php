@@ -1,11 +1,8 @@
 <?php
-session_start();
-require_once 'config.php';
+require_once 'auth_check.php';
+requireProfessor();
 
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'professor') {
-    header('Location: login.php');
-    exit();
-}
+require_once 'config.php';
 
 $professor_id = $_SESSION['user_id'];
 $stmt = $conn->prepare("SELECT CONCAT(first_name, ' ', last_name) as full_name FROM professors WHERE id = ?");
@@ -64,11 +61,11 @@ $professor_name = $stmt->get_result()->fetch_assoc()['full_name'];
             <nav class="sidebar-menu">
                 <a href="prof_dashboard.php" class="menu-item">Dashboard</a>
                 <a href="prof_advisees.php" class="menu-item">My Advisees</a>
-                <a href="prof_study_plans.php" class="menu-item">Study Plans</a>
+                <a href="prof_study_plans.php" class="menu-item active">Study Plans</a>
                 <a href="prof_acadadvising.php" class="menu-item">Academic Advising</a>
                 <a href="prof_concerns.php" class="menu-item">Student Concerns</a>
                 <a href="prof_reports.php" class="menu-item">Reports</a>
-                <a href="prof_email.php" class="menu-item active">Email System</a>
+                <a href="prof_email.php" class="menu-item">Email System</a>
                 <a href="prof_schedule.php" class="menu-item">Schedule</a>
                 <a href="prof_grade_approvals.php" class="menu-item">Grade Approvals</a>
             </nav>

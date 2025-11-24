@@ -34,9 +34,14 @@ if ($conn->connect_error) {
 // Set charset to utf8mb4
 $conn->set_charset("utf8mb4");
 
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 // Helper function to check if user is logged in
 function isLoggedIn() {
-    return isset($_SESSION['user_id']) && isset($_SESSION['user_type']);
+    return isset($_SESSION['user_id']) && isset($_SESSION['user_type']) && isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
 }
 
 // Helper function to require login
@@ -46,9 +51,6 @@ function requireLogin() {
         exit();
     }
 }
-
-// Helper function to require specific user type
-
 
 // Helper function to generate random password
 function generateRandomPassword($length = 12) {

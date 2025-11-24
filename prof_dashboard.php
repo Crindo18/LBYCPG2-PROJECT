@@ -1,12 +1,8 @@
 <?php
-session_start();
-require_once 'config.php';
+require_once 'auth_check.php';
+requireProfessor();
 
-// Check if user is logged in and is a professor
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'professor') {
-    header("Location: login.php");
-    exit();
-}
+require_once 'config.php';
 
 // Get professor inf
 $professor_id = $_SESSION['user_id'];
@@ -294,7 +290,7 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
                     <h1>Dashboard</h1>
                     <p style="color: #666; font-size: 14px; margin-top: 5px;">Welcome back, Prof. <?php echo htmlspecialchars($professor['last_name']); ?>!</p>
                 </div>
-                <a href="login.php" class="logout-btn">Logout</a>
+                <a href="logout.php" class="logout-btn">Logout</a>
             </div>
 
             <div class="stats-grid">

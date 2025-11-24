@@ -1,6 +1,8 @@
 <?php
+require_once 'auth_check.php';
+requireAdmin();
+
 require_once 'config.php';
-requireUserType('admin');
 
 $message = '';
 $message_type = '';

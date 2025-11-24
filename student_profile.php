@@ -1,11 +1,8 @@
 <?php
-session_start();
-require_once 'config.php';
+require_once 'auth_check.php';
+requireStudent();
 
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'student') {
-    header('Location: login.php');
-    exit();
-}
+require_once 'config.php';
 
 $student_id = $_SESSION['user_id'];
 $stmt = $conn->prepare("
