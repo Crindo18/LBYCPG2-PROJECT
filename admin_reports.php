@@ -7,23 +7,24 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
     exit();
 }
 
-ob_start();
-error_reporting(0);
-ini_set('display_errors', 0);
+if (isset($_GET['action'])) {
+    ob_start();
+    error_reporting(0);
+    ini_set('display_errors', 0);
 
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
+    if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        exit();
+    }
+
     ob_clean();
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-    exit();
-}
 
-ob_clean();
-header('Content-Type: application/json');
+    $action = $_GET['action'] ?? '';
 
-$action = $_GET['action'] ?? '';
-
-switch ($action) {
+    switch ($action) {
     case 'enrollment_stats':
         getEnrollmentStats();
         break;
@@ -44,6 +45,9 @@ switch ($action) {
         break;
     default:
         echo json_encode(['success' => false, 'message' => 'Invalid action']);
+    }
+
+    exit();
 }
 
 function getEnrollmentStats() {

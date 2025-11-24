@@ -15,7 +15,7 @@ $stmt->bind_param("i", $professor_id);
 $stmt->execute();
 $result = $stmt->get_result();
 $professor = $result->fetch_assoc();
-$professor_name = $professor['firstname'] . ' ' . $professor['lastname'];
+$professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -276,13 +276,13 @@ $professor_name = $professor['firstname'] . ' ' . $professor['lastname'];
                 <p><?php echo htmlspecialchars($professor_name); ?></p>
             </div>
             <nav class="sidebar-menu">
-                <a href="prof_dashboard.php" class="menu-item">Dashboard</a>
+                <a href="prof_dashboard.php" class="menu-item active">Dashboard</a>
                 <a href="prof_advisees.php" class="menu-item">My Advisees</a>
                 <a href="prof_study_plans.php" class="menu-item">Study Plans</a>
                 <a href="prof_acadadvising.php" class="menu-item">Academic Advising</a>
                 <a href="prof_concerns.php" class="menu-item">Student Concerns</a>
                 <a href="prof_reports.php" class="menu-item">Reports</a>
-                <a href="prof_email.php" class="menu-item active">Email System</a>
+                <a href="prof_email.php" class="menu-item">Email System</a>
                 <a href="prof_schedule.php" class="menu-item">Schedule</a>
                 <a href="prof_grade_approvals.php" class="menu-item">Grade Approvals</a>
             </nav>
@@ -292,7 +292,7 @@ $professor_name = $professor['firstname'] . ' ' . $professor['lastname'];
             <div class="top-bar">
                 <div>
                     <h1>Dashboard</h1>
-                    <p style="color: #666; font-size: 14px; margin-top: 5px;">Welcome back, Prof. <?php echo htmlspecialchars($professor['lastname']); ?>!</p>
+                    <p style="color: #666; font-size: 14px; margin-top: 5px;">Welcome back, Prof. <?php echo htmlspecialchars($professor['last_name']); ?>!</p>
                 </div>
                 <a href="login.php" class="logout-btn">Logout</a>
             </div>
