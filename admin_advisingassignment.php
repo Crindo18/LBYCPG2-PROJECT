@@ -1,11 +1,8 @@
 <?php
-session_start();
-require_once 'config.php';
+require_once 'auth_check.php';
+requireAdmin();
 
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
-    header('Location: login.php');
-    exit();
-}
+require_once 'config.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -95,7 +92,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
         <main class="main-content">
             <div class="top-bar">
                 <h1>Academic Advising Assignments</h1>
-                <a href="login.php" class="logout-btn">Logout</a>
+                <a href="logout.php" class="logout-btn">Logout</a>
             </div>
             
             <div class="content-card">

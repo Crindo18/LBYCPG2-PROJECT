@@ -1,12 +1,8 @@
 <?php
-session_start();
-require_once 'config.php';
+require_once 'auth_check.php';
+requireAdmin();
 
-// Check if user is admin
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
-    header('Location: login.php');
-    exit();
-}
+require_once 'config.php';
 
 $admin_username = $_SESSION['username'];
 ?>
@@ -81,7 +77,7 @@ $admin_username = $_SESSION['username'];
         <main class="main-content">
             <div class="top-bar">
                 <h1>Dashboard Overview</h1>
-                <a href="login.php" class="logout-btn">Logout</a>
+                <a href="logout.php" class="logout-btn">Logout</a>
             </div>
             
             <!-- Stats Cards -->
@@ -160,10 +156,11 @@ $admin_username = $_SESSION['username'];
     </div>
 
     <script>
-        // Load dashboard data on page load
-        document.addEventListener('DOMContentLoaded', function() {
+        let enrollmentChart, failedChart, clearanceChart, workloadChart, courseChart;
+        
+        window.onload = function() {
             loadDashboardStats();
-        });
+        };
 
         function loadDashboardStats() {
             fetch('admin_api.php?action=get_dashboard_stats')

@@ -1,3 +1,9 @@
+<?php
+require_once 'auth_check.php';
+requireAdmin();
+
+require_once 'config.php';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -61,7 +67,7 @@
         <main class="main-content">
             <div class="top-bar">
                 <h1>Student Concerns</h1>
-                <a href="../login.html" class="logout-btn">Logout</a>
+                <a href="logout.php" class="logout-btn">Logout</a>
             </div>
             
             <div class="content-card">

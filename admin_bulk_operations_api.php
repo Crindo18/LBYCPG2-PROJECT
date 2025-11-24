@@ -1,10 +1,13 @@
 <?php
+require_once 'auth_check.php';
+requireAdmin();
+
+require_once 'config.php';
+
 ob_start();
 error_reporting(0);
 ini_set('display_errors', 0);
 
-session_start();
-require_once 'config.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;

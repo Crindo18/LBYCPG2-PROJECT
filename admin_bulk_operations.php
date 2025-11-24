@@ -1,11 +1,8 @@
 <?php
-session_start();
-require_once 'config.php';
+require_once 'auth_check.php';
+requireAdmin();
 
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
-    header('Location: login.php');
-    exit();
-}
+require_once 'config.php';
 
 $admin_id = $_SESSION['user_id'];
 $stmt = $conn->prepare("SELECT username FROM admin WHERE id = ?");
@@ -141,7 +138,7 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
         <main class="main-content">
             <div class="top-bar">
                 <h1>Bulk Operations</h1>
-                <a href="login.php" class="logout-btn">Logout</a>
+                <a href="logout.php" class="logout-btn">Logout</a>
             </div>
             
             <div class="operations-grid">

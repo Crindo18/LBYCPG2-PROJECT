@@ -8,11 +8,14 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'professor') {
 }
 
 $professor_id = $_SESSION['user_id'];
-$stmt = $conn->prepare("SELECT CONCAT(first_name, ' ', last_name) as full_name FROM professors WHERE id = ?");
+
+$stmt = $conn->prepare("SELECT CONCAT(first_name, ' ', last_name) as full_name, last_name FROM professors WHERE id = ?");
 $stmt->bind_param("i", $professor_id);
 $stmt->execute();
-$professor_name = $stmt->get_result()->fetch_assoc()['full_name'];
+$professor = $stmt->get_result()->fetch_assoc();
+$professor_name = $professor['full_name'];
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -34,58 +37,64 @@ $professor_name = $stmt->get_result()->fetch_assoc()['full_name'];
         .top-bar { background: white; padding: 20px 30px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
         .top-bar h1 { font-size: 28px; color: #6a1b9a; }
         .logout-btn { padding: 8px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; text-decoration: none; font-size: 14px; }
-        
-        .tabs { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 2px solid #e0e0e0; }
-        .tab-btn { padding: 12px 24px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 15px; font-weight: 600; color: #666; transition: all 0.3s; }
-        .tab-btn.active { color: #6a1b9a; border-bottom-color: #6a1b9a; }
-        
         .content-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        .content-card h3 { font-size: 20px; color: #6a1b9a; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
-        
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; font-size: 14px; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; }
-        .form-group textarea { min-height: 200px; resize: vertical; }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #6a1b9a; box-shadow: 0 0 0 3px rgba(106, 27, 154, 0.1); }
-        
-        .btn { padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600; transition: all 0.3s; }
-        .btn-primary { background: #6a1b9a; color: white; }
-        .btn-primary:hover { background: #8e24aa; }
-        .btn-secondary { background: #6c757d; color: white; }
-        .btn-secondary:hover { background: #545b62; }
-        .btn-success { background: #28a745; color: white; }
-        .btn-success:hover { background: #218838; }
-        
-        .action-buttons { display: flex; gap: 10px; margin-top: 20px; }
-        
-        .template-list { display: grid; gap: 15px; }
-        .template-card { padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.3s; }
-        .template-card:hover { border-color: #6a1b9a; box-shadow: 0 2px 8px rgba(106, 27, 154, 0.1); }
-        .template-card h4 { color: #6a1b9a; margin-bottom: 10px; }
-        .template-card p { color: #666; font-size: 14px; }
-        .template-actions { display: flex; gap: 10px; margin-top: 10px; }
-        .btn-small { padding: 6px 12px; font-size: 13px; }
-        
-        .email-history { display: grid; gap: 15px; }
-        .email-item { padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; }
-        .email-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px; }
-        .email-to { font-weight: 600; color: #333; }
-        .email-date { font-size: 13px; color: #999; }
-        .email-subject { color: #6a1b9a; font-weight: 600; margin-bottom: 5px; }
-        .email-preview { color: #666; font-size: 14px; }
-        
-        .alert { padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; }
-        .alert.success { background: #d4edda; border-left: 4px solid #28a745; color: #155724; }
-        .alert.error { background: #f8d7da; border-left: 4px solid #dc3545; color: #721c24; }
-        
+        .content-card h2 { font-size: 22px; color: #6a1b9a; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #f0f0f0; }
+        .tab { padding: 12px 20px; background: none; border: none; color: #666; cursor: pointer; font-size: 14px; font-weight: 500; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.3s; }
+        .tab.active { color: #6a1b9a; border-bottom-color: #6a1b9a; }
+        .tab:hover { color: #6a1b9a; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #555; font-size: 14px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; font-family: inherit; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #6a1b9a; }
+        .form-group textarea { min-height: 150px; resize: vertical; }
+        .form-group small { color: #666; font-size: 13px; display: block; margin-top: 5px; }
         
-        .recipient-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
-        .recipient-tag { background: #6a1b9a; color: white; padding: 6px 12px; border-radius: 20px; font-size: 13px; display: flex; align-items: center; gap: 8px; }
-        .recipient-tag .remove { cursor: pointer; font-weight: bold; }
+        /* Improved Recipient Selection */
+        .recipient-selector { border: 1px solid #ddd; border-radius: 5px; padding: 15px; background: #f8f9fa; }
+        .recipient-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd; }
+        .recipient-count { font-size: 14px; color: #666; }
+        .recipient-count strong { color: #6a1b9a; }
+        .search-box-recipients { margin-bottom: 15px; }
+        .search-box-recipients input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
+        .search-box-recipients input:focus { outline: none; border-color: #6a1b9a; }
+        .recipient-list { max-height: 250px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; background: white; }
+        .recipient-item { padding: 10px 15px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: background 0.2s; }
+        .recipient-item:last-child { border-bottom: none; }
+        .recipient-item:hover { background: #f8f9fa; }
+        .recipient-item input[type="checkbox"] { cursor: pointer; width: 18px; height: 18px; }
+        .recipient-item label { cursor: pointer; flex: 1; font-size: 14px; margin: 0; }
+        .recipient-item .student-id { color: #999; font-size: 13px; margin-left: 8px; }
+        .select-actions { display: flex; gap: 10px; }
+        .btn-small { padding: 5px 12px; background: #6a1b9a; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-small:hover { background: #4a148c; }
+        .btn-small.secondary { background: #6c757d; }
+        .btn-small.secondary:hover { background: #5a6268; }
         
+        .checkbox-group { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+        .checkbox-group input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; }
+        .checkbox-group label { margin: 0; font-weight: normal; cursor: pointer; }
+        .btn-group { display: flex; gap: 10px; }
+        .btn-primary { padding: 10px 25px; background: #6a1b9a; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 500; }
+        .btn-primary:hover { background: #4a148c; }
+        .btn-secondary { padding: 10px 25px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }
+        .btn-secondary:hover { background: #5a6268; }
+        .table-container { overflow-x: auto; margin-top: 20px; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; font-size: 13px; color: #555; border-bottom: 2px solid #e0e0e0; }
+        .data-table td { padding: 12px; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        .data-table tr:hover { background: #f8f9fa; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+        .badge.success { background: #d4edda; color: #155724; }
+        .badge.pending { background: #fff3cd; color: #856404; }
+        .badge.danger { background: #f8d7da; color: #721c24; }
         .loading { text-align: center; padding: 40px; color: #666; }
+        .template-item { padding: 15px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 15px; background: #f8f9fa; }
+        .template-item h4 { margin-bottom: 8px; color: #333; font-size: 16px; }
+        .template-item p { font-size: 13px; color: #666; margin-bottom: 10px; }
+        .template-item .actions { display: flex; gap: 8px; }
     </style>
 </head>
 <body>
@@ -100,6 +109,7 @@ $professor_name = $stmt->get_result()->fetch_assoc()['full_name'];
                 <a href="prof_advisees.php" class="menu-item">My Advisees</a>
                 <a href="prof_study_plans.php" class="menu-item">Study Plans</a>
                 <a href="prof_acadadvising.php" class="menu-item">Academic Advising</a>
+                <a href="prof_concerns.php" class="menu-item">Student Concerns</a>
                 <a href="prof_reports.php" class="menu-item">Reports</a>
                 <a href="prof_email.php" class="menu-item active">Email System</a>
                 <a href="prof_schedule.php" class="menu-item">Schedule</a>
@@ -109,498 +119,345 @@ $professor_name = $stmt->get_result()->fetch_assoc()['full_name'];
         
         <main class="main-content">
             <div class="top-bar">
-                <h1>Email System</h1>
+                <div>
+                    <h1>Email System</h1>
+                    <p style="color: #666; font-size: 14px; margin-top: 5px;">Send emails to your advisees</p>
+                </div>
                 <a href="login.php" class="logout-btn">Logout</a>
             </div>
             
-            <div id="alertContainer"></div>
-            
-            <div class="tabs">
-                <button class="tab-btn active" onclick="switchTab('compose')">Compose Email</button>
-                <button class="tab-btn" onclick="switchTab('templates')">Templates</button>
-                <button class="tab-btn" onclick="switchTab('history')">Email History</button>
-                <button class="tab-btn" onclick="switchTab('bulk')">Bulk Email</button>
-            </div>
-            
-            <!-- Compose Email Tab -->
-            <div id="compose-tab" class="tab-content active">
-                <div class="content-card">
-                    <h3>Compose New Email</h3>
+            <div class="content-card">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('compose')">Compose Email</button>
+                    <button class="tab" onclick="switchTab('templates')">Templates</button>
+                    <button class="tab" onclick="switchTab('sent')">Sent Emails</button>
+                </div>
+                
+                <!-- Compose Email Tab -->
+                <div id="compose-tab" class="tab-content active">
                     <form id="composeForm">
                         <div class="form-group">
-                            <label>Recipient Type</label>
-                            <select id="recipientType" onchange="handleRecipientTypeChange()">
-                                <option value="individual">Individual Student</option>
-                                <option value="multiple">Multiple Students</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group" id="individualRecipient">
-                            <label>Select Student</label>
-                            <select id="studentSelect">
-                                <option value="">Loading students...</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group" id="multipleRecipients" style="display:none;">
-                            <label>Select Students</label>
-                            <select id="multiStudentSelect" multiple style="height: 150px;">
-                                <option value="">Loading students...</option>
-                            </select>
-                            <div class="recipient-tags" id="recipientTags"></div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Use Template (Optional)</label>
-                            <select id="templateSelect" onchange="loadTemplate()">
-                                <option value="">-- None --</option>
-                            </select>
+                            <label>Recipients</label>
+                            <div class="recipient-selector">
+                                <div class="recipient-header">
+                                    <div class="recipient-count">
+                                        <span id="selectedCount">0</span> student(s) selected
+                                    </div>
+                                    <div class="select-actions">
+                                        <button type="button" class="btn-small" onclick="selectAll()">Select All</button>
+                                        <button type="button" class="btn-small secondary" onclick="deselectAll()">Deselect All</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="search-box-recipients">
+                                    <input type="text" id="recipientSearch" placeholder="🔍 Search students by name or ID...">
+                                </div>
+                                
+                                <div class="recipient-list" id="recipientList">
+                                    <div class="loading" style="padding: 20px;">Loading students...</div>
+                                </div>
+                            </div>
                         </div>
                         
                         <div class="form-group">
-                            <label>Subject *</label>
-                            <input type="text" id="emailSubject" placeholder="Email subject" required>
+                            <label>Subject</label>
+                            <input type="text" id="subject" placeholder="Enter email subject" required>
                         </div>
                         
                         <div class="form-group">
-                            <label>Message *</label>
-                            <textarea id="emailBody" placeholder="Type your message here..." required></textarea>
+                            <label>Message</label>
+                            <textarea id="message" placeholder="Enter your message" required></textarea>
                         </div>
                         
-                        <div class="action-buttons">
-                            <button type="submit" class="btn btn-primary">Send Email</button>
-                            <button type="button" class="btn btn-secondary" onclick="clearForm()">Clear</button>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="sendImmediately" checked>
+                            <label for="sendImmediately">Send immediately</label>
+                        </div>
+                        
+                        <div class="btn-group">
+                            <button type="submit" class="btn-primary">Send Email</button>
+                            <button type="button" class="btn-secondary" onclick="showTemplates()">Load Template</button>
                         </div>
                     </form>
                 </div>
-            </div>
-            
-            <!-- Templates Tab -->
-            <div id="templates-tab" class="tab-content">
-                <div class="content-card">
-                    <h3>Email Templates</h3>
-                    <button class="btn btn-success" onclick="showNewTemplateForm()" style="margin-bottom: 20px;">+ New Template</button>
+                
+                <!-- Templates Tab -->
+                <div id="templates-tab" class="tab-content">
+                    <button type="button" class="btn-primary" onclick="showNewTemplateForm()" style="margin-bottom: 20px;">Create New Template</button>
                     
-                    <div id="newTemplateForm" style="display:none; margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-                        <h4 style="margin-bottom: 15px;">Create New Template</h4>
-                        <div class="form-group">
-                            <label>Template Name *</label>
-                            <input type="text" id="templateName" placeholder="e.g., Meeting Reminder">
-                        </div>
-                        <div class="form-group">
-                            <label>Subject *</label>
-                            <input type="text" id="templateSubject" placeholder="Email subject">
-                        </div>
-                        <div class="form-group">
-                            <label>Body *</label>
-                            <textarea id="templateBody" placeholder="Email body (use {student_name} for personalization)"></textarea>
-                        </div>
-                        <div class="action-buttons">
-                            <button class="btn btn-success" onclick="saveTemplate()">Save Template</button>
-                            <button class="btn btn-secondary" onclick="hideNewTemplateForm()">Cancel</button>
-                        </div>
+                    <div id="newTemplateForm" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 5px; margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 15px; color: #6a1b9a;">New Template</h3>
+                        <form id="templateForm">
+                            <div class="form-group">
+                                <label>Template Name</label>
+                                <input type="text" id="templateName" placeholder="e.g., Study Plan Reminder" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Subject</label>
+                                <input type="text" id="templateSubject" placeholder="Email subject" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Message Body</label>
+                                <textarea id="templateBody" placeholder="Template message" required style="min-height: 120px;"></textarea>
+                            </div>
+                            <div class="btn-group">
+                                <button type="submit" class="btn-primary">Save Template</button>
+                                <button type="button" class="btn-secondary" onclick="hideNewTemplateForm()">Cancel</button>
+                            </div>
+                        </form>
                     </div>
                     
-                    <div class="template-list" id="templateList">
+                    <div id="templatesList">
                         <div class="loading">Loading templates...</div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- History Tab -->
-            <div id="history-tab" class="tab-content">
-                <div class="content-card">
-                    <h3>Email History</h3>
-                    <div class="email-history" id="emailHistory">
-                        <div class="loading">Loading email history...</div>
+                
+                <!-- Sent Emails Tab -->
+                <div id="sent-tab" class="tab-content">
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Recipient</th>
+                                    <th>Subject</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sentEmailsTable">
+                                <tr><td colspan="4" class="loading">Loading sent emails...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
-                </div>
-            </div>
-            
-            <!-- Bulk Email Tab -->
-            <div id="bulk-tab" class="tab-content">
-                <div class="content-card">
-                    <h3>Send Bulk Email to All Advisees</h3>
-                    <form id="bulkEmailForm">
-                        <div class="form-group">
-                            <label>Filter Recipients (Optional)</label>
-                            <select id="bulkFilter">
-                                <option value="all">All Advisees</option>
-                                <option value="cleared">Only Cleared Students</option>
-                                <option value="not_cleared">Only Non-Cleared Students</option>
-                                <option value="at_risk">Only At-Risk Students (≥15 failed units)</option>
-                            </select>
-                        </div>
-                        
-                        <div id="recipientCount" style="margin-bottom: 15px; padding: 10px; background: #e3f2fd; border-radius: 5px; color: #1565c0;">
-                            Recipients: <strong id="countDisplay">0</strong> students
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Subject *</label>
-                            <input type="text" id="bulkSubject" placeholder="Email subject" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Message *</label>
-                            <textarea id="bulkBody" placeholder="Type your message here..." required></textarea>
-                        </div>
-                        
-                        <div class="action-buttons">
-                            <button type="submit" class="btn btn-primary">Send to All</button>
-                            <button type="button" class="btn btn-secondary" onclick="clearBulkForm()">Clear</button>
-                        </div>
-                    </form>
                 </div>
             </div>
         </main>
     </div>
-
+    
     <script>
-        let allStudents = [];
-        let templates = [];
+    let allStudents = [];
+    let selectedStudents = new Set();
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadStudents();
+        loadTemplates();
+        loadSentEmails();
         
-        document.addEventListener('DOMContentLoaded', function() {
-            loadStudents();
-            loadTemplates();
-            loadEmailHistory();
-            
-            document.getElementById('composeForm').addEventListener('submit', sendEmail);
-            document.getElementById('bulkEmailForm').addEventListener('submit', sendBulkEmail);
-            document.getElementById('bulkFilter').addEventListener('change', updateRecipientCount);
+        // Search functionality
+        document.getElementById('recipientSearch').addEventListener('input', function() {
+            filterStudents(this.value);
         });
-        
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
-            event.target.classList.add('active');
-            document.getElementById(tabName + '-tab').classList.add('active');
-            
-            if (tabName === 'history') {
-                loadEmailHistory();
+    });
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById(tab + '-tab').classList.add('active');
+        if (tab === 'templates') loadTemplates();
+        if (tab === 'sent') loadSentEmails();
+    }
+
+    function showTemplates() {
+        document.querySelectorAll('.tab')[1].click();
+    }
+
+    function loadStudents() {
+        fetch('prof_email_api.php?action=get_advisees')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                allStudents = data.students;
+                renderStudentList(allStudents);
             }
+        });
+    }
+
+    function renderStudentList(students) {
+        const list = document.getElementById('recipientList');
+        if (students.length === 0) {
+            list.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No students found</div>';
+            return;
         }
         
-        function loadStudents() {
-            fetch('prof_email_api.php?action=get_advisees')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        allStudents = data.students;
-                        populateStudentSelects();
-                        updateRecipientCount();
-                    }
-                });
+        list.innerHTML = students.map(s => `
+            <div class="recipient-item" onclick="toggleStudent(${s.id})">
+                <input type="checkbox" id="student_${s.id}" value="${s.id}" ${selectedStudents.has(s.id) ? 'checked' : ''} onclick="event.stopPropagation(); toggleStudent(${s.id})">
+                <label for="student_${s.id}">${s.name}<span class="student-id">${s.id_number}</span></label>
+            </div>
+        `).join('');
+        
+        updateSelectedCount();
+    }
+
+    function toggleStudent(id) {
+        if (selectedStudents.has(id)) {
+            selectedStudents.delete(id);
+        } else {
+            selectedStudents.add(id);
+        }
+        const checkbox = document.getElementById('student_' + id);
+        if (checkbox) checkbox.checked = selectedStudents.has(id);
+        updateSelectedCount();
+    }
+
+    function selectAll() {
+        const visibleStudents = document.querySelectorAll('.recipient-item:not([style*="display: none"]) input[type="checkbox"]');
+        visibleStudents.forEach(cb => {
+            selectedStudents.add(parseInt(cb.value));
+            cb.checked = true;
+        });
+        updateSelectedCount();
+    }
+
+    function deselectAll() {
+        selectedStudents.clear();
+        document.querySelectorAll('.recipient-item input[type="checkbox"]').forEach(cb => cb.checked = false);
+        updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+        document.getElementById('selectedCount').textContent = selectedStudents.size;
+    }
+
+    function filterStudents(search) {
+        const filtered = allStudents.filter(s => 
+            s.name.toLowerCase().includes(search.toLowerCase()) || 
+            s.id_number.includes(search)
+        );
+        renderStudentList(filtered);
+    }
+
+    document.getElementById('composeForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (selectedStudents.size === 0) { 
+            alert('Please select at least one recipient'); 
+            return; 
         }
         
-        function populateStudentSelects() {
-            const singleSelect = document.getElementById('studentSelect');
-            const multiSelect = document.getElementById('multiStudentSelect');
-            
-            let options = '<option value="">-- Select Student --</option>';
-            allStudents.forEach(student => {
-                options += `<option value="${student.id}">${student.id_number} - ${student.full_name}</option>`;
-            });
-            
-            singleSelect.innerHTML = options;
-            multiSelect.innerHTML = options.replace('-- Select Student --', '');
-        }
+        const formData = new FormData();
+        formData.append('action', 'send_email');
+        formData.append('recipients', JSON.stringify(Array.from(selectedStudents)));
+        formData.append('subject', document.getElementById('subject').value);
+        formData.append('message', document.getElementById('message').value);
+        formData.append('send_immediately', document.getElementById('sendImmediately').checked ? '1' : '0');
         
-        function handleRecipientTypeChange() {
-            const type = document.getElementById('recipientType').value;
-            document.getElementById('individualRecipient').style.display = type === 'individual' ? 'block' : 'none';
-            document.getElementById('multipleRecipients').style.display = type === 'multiple' ? 'block' : 'none';
-        }
-        
-        function sendEmail(e) {
-            e.preventDefault();
-            
-            const type = document.getElementById('recipientType').value;
-            let recipients = [];
-            
-            if (type === 'individual') {
-                const studentId = document.getElementById('studentSelect').value;
-                if (!studentId) {
-                    showAlert('Please select a student', 'error');
+        fetch('prof_email_api.php', { method: 'POST', body: formData })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                document.getElementById('subject').value = '';
+                document.getElementById('message').value = '';
+                deselectAll();
+                loadSentEmails();
+            } else { 
+                alert('Error: ' + data.message); 
+            }
+        });
+    });
+
+    function loadTemplates() {
+        fetch('prof_email_api.php?action=get_templates')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const list = document.getElementById('templatesList');
+                if (data.templates.length === 0) {
+                    list.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">No templates yet</p>';
                     return;
                 }
-                recipients = [studentId];
-            } else {
-                const selected = Array.from(document.getElementById('multiStudentSelect').selectedOptions);
-                recipients = selected.map(opt => opt.value);
-                if (recipients.length === 0) {
-                    showAlert('Please select at least one student', 'error');
+                list.innerHTML = data.templates.map(t => `
+                    <div class="template-item">
+                        <h4>${t.template_name}</h4>
+                        <p><strong>Subject:</strong> ${t.subject}</p>
+                        <p style="white-space: pre-wrap;">${t.body.substring(0, 150)}${t.body.length > 150 ? '...' : ''}</p>
+                        <div class="actions">
+                            <button class="btn-secondary" onclick="useTemplate(${t.id})">Use Template</button>
+                            <button class="btn-secondary" onclick="deleteTemplate(${t.id})" style="background: #dc3545;">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        });
+    }
+
+    function showNewTemplateForm() {
+        document.getElementById('newTemplateForm').style.display = 'block';
+    }
+
+    function hideNewTemplateForm() {
+        document.getElementById('newTemplateForm').style.display = 'none';
+        document.getElementById('templateForm').reset();
+    }
+
+    document.getElementById('templateForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData();
+        formData.append('action', 'save_template');
+        formData.append('template_name', document.getElementById('templateName').value);
+        formData.append('subject', document.getElementById('templateSubject').value);
+        formData.append('body', document.getElementById('templateBody').value);
+        fetch('prof_email_api.php', { method: 'POST', body: formData })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                hideNewTemplateForm();
+                loadTemplates();
+            } else { alert('Error: ' + data.message); }
+        });
+    });
+
+    function useTemplate(id) {
+        fetch(`prof_email_api.php?action=get_template&id=${id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('subject').value = data.template.subject;
+                document.getElementById('message').value = data.template.body;
+                document.querySelectorAll('.tab')[0].click();
+                alert('Template loaded into composer');
+            }
+        });
+    }
+
+    function deleteTemplate(id) {
+        if (!confirm('Delete this template?')) return;
+        const formData = new FormData();
+        formData.append('action', 'delete_template');
+        formData.append('id', id);
+        fetch('prof_email_api.php', { method: 'POST', body: formData })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                loadTemplates();
+            } else { alert('Error: ' + data.message); }
+        });
+    }
+
+    function loadSentEmails() {
+        fetch('prof_email_api.php?action=get_sent_emails')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const tbody = document.getElementById('sentEmailsTable');
+                if (data.emails.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: #999;">No sent emails yet</td></tr>';
                     return;
                 }
+                tbody.innerHTML = data.emails.map(e => `
+                    <tr>
+                        <td>${new Date(e.created_at).toLocaleString('en-US', {year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'})}</td>
+                        <td>${e.recipient_name}</td>
+                        <td>${e.subject}</td>
+                        <td><span class="badge ${e.status === 'sent' ? 'success' : e.status === 'pending' ? 'pending' : 'danger'}">${e.status}</span></td>
+                    </tr>
+                `).join('');
             }
-            
-            const formData = new FormData();
-            formData.append('action', 'send_email');
-            formData.append('recipients', JSON.stringify(recipients));
-            formData.append('subject', document.getElementById('emailSubject').value);
-            formData.append('body', document.getElementById('emailBody').value);
-            
-            fetch('prof_email_api.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showAlert('Email sent successfully!', 'success');
-                    clearForm();
-                    loadEmailHistory();
-                } else {
-                    showAlert('Error: ' + data.message, 'error');
-                }
-            });
-        }
-        
-        function sendBulkEmail(e) {
-            e.preventDefault();
-            
-            if (!confirm('Send email to all selected advisees?')) {
-                return;
-            }
-            
-            const formData = new FormData();
-            formData.append('action', 'send_bulk_email');
-            formData.append('filter', document.getElementById('bulkFilter').value);
-            formData.append('subject', document.getElementById('bulkSubject').value);
-            formData.append('body', document.getElementById('bulkBody').value);
-            
-            fetch('prof_email_api.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showAlert(`Email sent to ${data.count} students successfully!`, 'success');
-                    clearBulkForm();
-                } else {
-                    showAlert('Error: ' + data.message, 'error');
-                }
-            });
-        }
-        
-        function loadTemplates() {
-            fetch('prof_email_api.php?action=get_templates')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        templates = data.templates;
-                        renderTemplates();
-                        populateTemplateSelect();
-                    }
-                });
-        }
-        
-        function renderTemplates() {
-            const container = document.getElementById('templateList');
-            
-            if (templates.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#999;">No templates yet. Create your first template!</p>';
-                return;
-            }
-            
-            let html = '';
-            templates.forEach(template => {
-                html += `
-                    <div class="template-card">
-                        <h4>${template.template_name}</h4>
-                        <div style="margin: 10px 0;">
-                            <strong>Subject:</strong> ${template.subject}
-                        </div>
-                        <p>${template.body.substring(0, 150)}...</p>
-                        <div class="template-actions">
-                            <button class="btn btn-primary btn-small" onclick="useTemplate(${template.id})">Use</button>
-                            <button class="btn btn-secondary btn-small" onclick="deleteTemplate(${template.id})">Delete</button>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-        
-        function populateTemplateSelect() {
-            const select = document.getElementById('templateSelect');
-            let options = '<option value="">-- None --</option>';
-            
-            templates.forEach(template => {
-                options += `<option value="${template.id}">${template.template_name}</option>`;
-            });
-            
-            select.innerHTML = options;
-        }
-        
-        function showNewTemplateForm() {
-            document.getElementById('newTemplateForm').style.display = 'block';
-        }
-        
-        function hideNewTemplateForm() {
-            document.getElementById('newTemplateForm').style.display = 'none';
-            document.getElementById('templateName').value = '';
-            document.getElementById('templateSubject').value = '';
-            document.getElementById('templateBody').value = '';
-        }
-        
-        function saveTemplate() {
-            const name = document.getElementById('templateName').value;
-            const subject = document.getElementById('templateSubject').value;
-            const body = document.getElementById('templateBody').value;
-            
-            if (!name || !subject || !body) {
-                showAlert('Please fill in all template fields', 'error');
-                return;
-            }
-            
-            const formData = new FormData();
-            formData.append('action', 'save_template');
-            formData.append('name', name);
-            formData.append('subject', subject);
-            formData.append('body', body);
-            
-            fetch('prof_email_api.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showAlert('Template saved successfully!', 'success');
-                    hideNewTemplateForm();
-                    loadTemplates();
-                } else {
-                    showAlert('Error: ' + data.message, 'error');
-                }
-            });
-        }
-        
-        function useTemplate(templateId) {
-            const template = templates.find(t => t.id == templateId);
-            if (template) {
-                document.getElementById('emailSubject').value = template.subject;
-                document.getElementById('emailBody').value = template.body;
-                switchTab('compose');
-            }
-        }
-        
-        function loadTemplate() {
-            const templateId = document.getElementById('templateSelect').value;
-            if (templateId) {
-                useTemplate(templateId);
-            }
-        }
-        
-        function deleteTemplate(templateId) {
-            if (!confirm('Delete this template?')) {
-                return;
-            }
-            
-            const formData = new FormData();
-            formData.append('action', 'delete_template');
-            formData.append('template_id', templateId);
-            
-            fetch('prof_email_api.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showAlert('Template deleted', 'success');
-                    loadTemplates();
-                } else {
-                    showAlert('Error: ' + data.message, 'error');
-                }
-            });
-        }
-        
-        function loadEmailHistory() {
-            fetch('prof_email_api.php?action=get_email_history')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        renderEmailHistory(data.emails);
-                    }
-                });
-        }
-        
-        function renderEmailHistory(emails) {
-            const container = document.getElementById('emailHistory');
-            
-            if (emails.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#999;">No emails sent yet</p>';
-                return;
-            }
-            
-            let html = '';
-            emails.forEach(email => {
-                html += `
-                    <div class="email-item">
-                        <div class="email-header">
-                            <div>
-                                <div class="email-to">To: ${email.recipient_names}</div>
-                                <div class="email-subject">${email.subject}</div>
-                            </div>
-                            <div class="email-date">${formatDate(email.sent_at)}</div>
-                        </div>
-                        <div class="email-preview">${email.body.substring(0, 200)}...</div>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-        
-        function updateRecipientCount() {
-            const filter = document.getElementById('bulkFilter').value;
-            
-            let count = 0;
-            if (filter === 'all') {
-                count = allStudents.length;
-            } else if (filter === 'cleared') {
-                count = allStudents.filter(s => s.advising_cleared).length;
-            } else if (filter === 'not_cleared') {
-                count = allStudents.filter(s => !s.advising_cleared).length;
-            } else if (filter === 'at_risk') {
-                count = allStudents.filter(s => s.accumulated_failed_units >= 15).length;
-            }
-            
-            document.getElementById('countDisplay').textContent = count;
-        }
-        
-        function clearForm() {
-            document.getElementById('composeForm').reset();
-            document.getElementById('recipientType').value = 'individual';
-            handleRecipientTypeChange();
-        }
-        
-        function clearBulkForm() {
-            document.getElementById('bulkEmailForm').reset();
-            updateRecipientCount();
-        }
-        
-        function showAlert(message, type) {
-            const container = document.getElementById('alertContainer');
-            container.innerHTML = `<div class="alert ${type}">${message}</div>`;
-            setTimeout(() => container.innerHTML = '', 5000);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-        
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
+        });
+    }
     </script>
 </body>
 </html>

@@ -26,7 +26,7 @@ if (!file_exists(UPLOAD_DIR)) {
 // Database connection using MySQLi
 $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 
-// Check connection
+// Check connectionn
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
@@ -48,13 +48,7 @@ function requireLogin() {
 }
 
 // Helper function to require specific user type
-function requireUserType($type) {
-    requireLogin();
-    if ($_SESSION['user_type'] !== $type) {
-        header('Location: login.php');
-        exit();
-    }
-}
+
 
 // Helper function to generate random password
 function generateRandomPassword($length = 12) {
