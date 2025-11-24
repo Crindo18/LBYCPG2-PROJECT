@@ -2,6 +2,21 @@
 session_start();
 require_once 'config.php';
 
+// If user is already logged in, redirect to their dashboard
+if (isset($_SESSION['user_id']) && isset($_SESSION['user_type']) && isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
+    switch ($_SESSION['user_type']) {
+        case 'admin':
+            header('Location: admin_dashboard.php');
+            exit();
+        case 'professor':
+            header('Location: prof_dashboard.php');
+            exit();
+        case 'student':
+            header('Location: student_dashboard.php');
+            exit();
+    }
+}
+
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

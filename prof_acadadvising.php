@@ -1,12 +1,8 @@
 <?php
-session_start();
-require_once 'config.php';
+require_once 'auth_check.php';
+requireProfessor();
 
-// Check if user is logged in and is a professor
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'professor') {
-    header('Location: login.php');
-    exit();
-}
+require_once 'config.php';
 
 $professor_id = $_SESSION['user_id'];
 

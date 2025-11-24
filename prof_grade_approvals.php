@@ -1,8 +1,8 @@
 <?php
-session_start();
+require_once 'auth_check.php';
 require_once 'config.php';
 
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'professor') {
+if (!isAuthenticated() || $_SESSION['user_type'] !== 'professor') {
     if (isset($_GET['action']) || isset($_POST['action'])) {
         header('Content-Type: application/json');
         echo json_encode(['success' => false, 'message' => 'Unauthorized']);

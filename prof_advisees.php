@@ -1,11 +1,8 @@
 <?php
-session_start();
-require_once 'config.php';
+require_once 'auth_check.php';
+requireProfessor();
 
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'professor') {
-    header('Location: login.php');
-    exit();
-}
+require_once 'config.php';
 
 $professor_id = $_SESSION['user_id'];
 $stmt = $conn->prepare("SELECT CONCAT(first_name, ' ', last_name) as full_name FROM professors WHERE id = ?");
