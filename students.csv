@@ -1,0 +1,31 @@
+id_number,first_name,middle_name,last_name,college,department,program,specialization,phone_number,email,parent_guardian_name,parent_guardian_number
+12100001,Miguel,Jose,Santos,Gokongwei College of Engineering,GCOE-DECE,BS Computer Engineering,N/A,+63 917 111 2233,miguel_santos@dlsu.edu.ph,Maria Santos,+63 918 111 2233
+12100002,Angela,Marie,Reyes,Gokongwei College of Engineering,GCOE-DECE,BS Electronics Engineering,N/A,+63 917 222 3344,angela_reyes@dlsu.edu.ph,Roberto Reyes,+63 918 222 3344
+12100003,Carlos,Antonio,Cruz,Gokongwei College of Engineering,GCOE-DECE,BS Electrical Engineering,N/A,+63 917 333 4455,carlos_cruz@dlsu.edu.ph,Elena Cruz,+63 918 333 4455
+12100004,Sofia,Grace,Dizon,Gokongwei College of Engineering,GCOE-DECE,BS Computer Engineering,N/A,+63 917 444 5566,sofia_dizon@dlsu.edu.ph,Ricardo Dizon,+63 918 444 5566
+12100005,Gabriel,Luis,Mendoza,Gokongwei College of Engineering,GCOE-DECE,BS Electronics Engineering,N/A,+63 917 555 6677,gabriel_mendoza@dlsu.edu.ph,Patricia Mendoza,+63 918 555 6677
+12100006,Hannah,Rose,Garcia,Gokongwei College of Engineering,GCOE-DECE,BS Electrical Engineering,N/A,+63 917 666 7788,hannah_garcia@dlsu.edu.ph,Fernando Garcia,+63 918 666 7788
+12100007,Rafael,Paolo,Bautista,Gokongwei College of Engineering,GCOE-DECE,BS Computer Engineering,N/A,+63 917 777 8899,rafael_bautista@dlsu.edu.ph,Theresa Bautista,+63 918 777 8899
+12100008,Julia,Nicole,Torres,Gokongwei College of Engineering,GCOE-DECE,BS Electronics Engineering,N/A,+63 917 888 9900,julia_torres@dlsu.edu.ph,Manuel Torres,+63 918 888 9900
+12100009,Ethan,James,Lopez,Gokongwei College of Engineering,GCOE-DECE,BS Electrical Engineering,N/A,+63 917 999 0011,ethan_lopez@dlsu.edu.ph,Carmen Lopez,+63 918 999 0011
+12100010,Isabella,Mae,Gonzales,Gokongwei College of Engineering,GCOE-DECE,BS Computer Engineering,N/A,+63 917 000 1122,isabella_gonzales@dlsu.edu.ph,Jose Gonzales,+63 918 000 1122
+12100011,Liam,Alexander,Ramos,Gokongwei College of Engineering,GCOE-DECE,BS Electronics Engineering,N/A,+63 917 123 4567,liam_ramos@dlsu.edu.ph,Susan Ramos,+63 918 123 4567
+12100012,Ava,Victoria,Flores,Gokongwei College of Engineering,GCOE-DECE,BS Electrical Engineering,N/A,+63 917 234 5678,ava_flores@dlsu.edu.ph,Ramon Flores,+63 918 234 5678
+12100013,Noah,Elijah,Castillo,Gokongwei College of Engineering,GCOE-DECE,BS Computer Engineering,N/A,+63 917 345 6789,noah_castillo@dlsu.edu.ph,Lydia Castillo,+63 918 345 6789
+12100014,Mia,Elizabeth,Villanueva,Gokongwei College of Engineering,GCOE-DECE,BS Electronics Engineering,N/A,+63 917 456 7890,mia_villanueva@dlsu.edu.ph,Antonio Villanueva,+63 918 456 7890
+12100015,Lucas,Daniel,Rivera,Gokongwei College of Engineering,GCOE-DECE,BS Electrical Engineering,N/A,+63 917 567 8901,lucas_rivera@dlsu.edu.ph,Cecilia Rivera,+63 918 567 8901
+12100016,Chloe,Sophia,Aquino,Gokongwei College of Engineering,GCOE-DECE,BS Computer Engineering,N/A,+63 917 678 9012,chloe_aquino@dlsu.edu.ph,Eduardo Aquino,+63 918 678 9012
+12100017,Mason,Caleb,Pineda,Gokongwei College of Engineering,GCOE-DECE,BS Electronics Engineering,N/A,+63 917 789 0123,mason_pineda@dlsu.edu.ph,Rosario Pineda,+63 918 789 0123
+12100018,Zoe,Isabelle,Tan,Gokongwei College of Engineering,GCOE-DECE,BS Electrical Engineering,N/A,+63 917 890 1234,zoe_tan@dlsu.edu.ph,Benjamin Tan,+63 918 890 1234
+12100019,Aiden,Matthew,Lim,Gokongwei College of Engineering,GCOE-DECE,BS Computer Engineering,N/A,+63 917 901 2345,aiden_lim@dlsu.edu.ph,Grace Lim,+63 918 901 2345
+12100020,Ella,Madison,Chua,Gokongwei College of Engineering,GCOE-DECE,BS Electronics Engineering,N/A,+63 917 012 3456,ella_chua@dlsu.edu.ph,Peter Chua,+63 918 012 3456
+12100021,Jacob,Ryan,Pascual,Gokongwei College of Engineering,GCOE-DECE,BS Electrical Engineering,N/A,+63 917 123 5678,jacob_pascual@dlsu.edu.ph,Margarita Pascual,+63 918 123 5678
+12100022,Lily,Samantha,De Leon,Gokongwei College of Engineering,GCOE-DECE,BS Computer Engineering,N/A,+63 917 234 6789,lily_deleon@dlsu.edu.ph,Francisco De Leon,+63 918 234 6789
+12100023,Logan,Andrew,Malig,Gokongwei College of Engineering,GCOE-DECE,BS Electronics Engineering,N/A,+63 917 345 7890,logan_malig@dlsu.edu.ph,Catherine Malig,+63 918 345 7890
+12100024,Grace,Olivia,Mercado,Gokongwei College of Engineering,GCOE-DECE,BS Electrical Engineering,N/A,+63 917 456 8901,grace_mercado@dlsu.edu.ph,Alberto Mercado,+63 918 456 8901
+12100025,Jack,Henry,Salazar,Gokongwei College of Engineering,GCOE-DECE,BS Computer Engineering,N/A,+63 917 567 9012,jack_salazar@dlsu.edu.ph,Teresa Salazar,+63 918 567 9012
+12100026,Amelia,Claire,Aguilar,Gokongwei College of Engineering,GCOE-DECE,BS Electronics Engineering,N/A,+63 917 678 0123,amelia_aguilar@dlsu.edu.ph,Danilo Aguilar,+63 918 678 0123
+12100027,William,Isaac,Delos Santos,Gokongwei College of Engineering,GCOE-DECE,BS Electrical Engineering,N/A,+63 917 789 1234,william_delossantos@dlsu.edu.ph,Marianne Delos Santos,+63 918 789 1234
+12100028,Harper,Faith,Ferrer,Gokongwei College of Engineering,GCOE-DECE,BS Computer Engineering,N/A,+63 917 890 2345,harper_ferrer@dlsu.edu.ph,Gregorio Ferrer,+63 918 890 2345
+12100029,James,Owen,Magno,Gokongwei College of Engineering,GCOE-DECE,BS Electronics Engineering,N/A,+63 917 901 3456,james_magno@dlsu.edu.ph,Jocelyn Magno,+63 918 901 3456
+12100030,Emily,Rose,Domingo,Gokongwei College of Engineering,GCOE-DECE,BS Electrical Engineering,N/A,+63 917 012 4567,emily_domingo@dlsu.edu.ph,Alfredo Domingo,+63 918 012 4567

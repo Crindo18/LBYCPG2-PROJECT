@@ -1,0 +1,9 @@
+course_code,course_name,units,program,term,course_type,prerequisites
+FNDMATH,Fundamental Mathematics,3,BS Computer Engineering,Term 1,major,
+PROLOGI,Programming Logic,3,BS Computer Engineering,Term 1,major,
+LBYCPA1,Computer Programming Lab 1,1,BS Computer Engineering,Term 1,major,"PROLOGI(C)"
+CALENG1,Calculus for Engineers 1,3,BS Computer Engineering,Term 2,major,"FNDMATH(H)"
+CSSWENG,Software Engineering,3,BS Computer Engineering,Term 2,major,
+CSALGCM,Design and Analysis of Algorithms,3,BS Computer Engineering,Term 2,major,"PROLOGI(H)"
+REMETHS,Methods of Research for CpE,3,BS Computer Engineering,Term 10,major,"ENGDATA(H),GEPCOMM(H),LOGDSGN(H)"
+DSIGPRO,Digital Signal Processing Lecture,3,BS Computer Engineering,Term 11,major,"FDCNSYS(H),EMBDSYS(S)"
