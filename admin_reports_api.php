@@ -1,10 +1,12 @@
 <?php
+require_once 'auth_check.php';
+requireAdmin();
+
+require_once 'config.php';
+
 ob_start();
 error_reporting(0);
 ini_set('display_errors', 0);
-
-session_start();
-require_once 'config.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
     ob_clean();

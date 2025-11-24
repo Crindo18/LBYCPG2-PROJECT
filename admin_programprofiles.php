@@ -492,7 +492,7 @@ $programs = $stmt->fetchAll();
         <main class="main-content">
             <div class="top-bar">
                 <h1>Program Profiles</h1>
-                <a href="login.php" class="logout-btn">Logout</a>
+                <a href="logout.php" class="logout-btn">Logout</a>
             </div>
             
             <?php if ($message): ?>

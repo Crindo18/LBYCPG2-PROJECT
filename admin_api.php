@@ -1,4 +1,9 @@
 <?php
+require_once 'auth_check.php';
+requireAdmin();
+
+require_once 'config.php';
+
 // Prevent any output before JSON
 ob_start();
 
@@ -6,12 +11,6 @@ ob_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 0); // Don't display errors, log them instead
 ini_set('log_errors', 1);
-
-// Start session first
-session_start();
-
-// Then include config
-require_once 'config.php';
 
 // Set JSON header
 header('Content-Type: application/json');
