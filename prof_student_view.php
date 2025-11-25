@@ -124,7 +124,6 @@ $professor_name = $stmt->get_result()->fetch_assoc()['name'];
             <nav class="sidebar-menu">
                 <a href="prof_dashboard.php" class="menu-item">Dashboard</a>
                 <a href="prof_advisees.php" class="menu-item">My Advisees</a>
-                <a href="prof_study_plans.php" class="menu-item">Study Plans</a>
                 <a href="prof_acadadvising.php" class="menu-item">Academic Advising</a>
                 <a href="prof_concerns.php" class="menu-item">Student Concerns</a>
                 <a href="prof_reports.php" class="menu-item">Reports</a>
@@ -303,18 +302,8 @@ $professor_name = $stmt->get_result()->fetch_assoc()['name'];
                     </div>
                 </div>
             </div>
-            
-            <!-- Study Plans Tab -->
-            <div id="studyplans" class="tab-content">
-                <div class="content-card">
-                    <h3>Study Plan Submissions</h3>
-                    <div id="studyPlansContent">
-                        <div style="text-align: center; padding: 40px; color: #999;">
-                            Loading study plans...
-                        </div>
-                    </div>
-                </div>
-            </div>
+
+            <!-- removed Study Plans Tab -->
             
             <!-- Concerns Tab -->
             <div id="concerns" class="tab-content">
@@ -350,7 +339,6 @@ $professor_name = $stmt->get_result()->fetch_assoc()['name'];
             // Load data if not loaded
             if (tabName === 'booklet') loadBooklet();
             if (tabName === 'grades') loadGrades();
-            if (tabName === 'studyplans') loadStudyPlans();
             if (tabName === 'concerns') loadConcerns();
         }
         
@@ -463,51 +451,6 @@ $professor_name = $stmt->get_result()->fetch_assoc()['name'];
             container.innerHTML = html;
         }
         
-        function loadStudyPlans() {
-            fetch(`prof_api.php?action=get_student_study_plans&student_id=${studentId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        renderStudyPlans(data.plans);
-                    } else {
-                        document.getElementById('studyPlansContent').innerHTML = '<div class="empty-state">No study plans submitted</div>';
-                    }
-                })
-                .catch(error => {
-                    document.getElementById('studyPlansContent').innerHTML = '<div class="alert danger">Error loading study plans</div>';
-                });
-        }
-        
-        function renderStudyPlans(plans) {
-            const container = document.getElementById('studyPlansContent');
-            
-            if (plans.length === 0) {
-                container.innerHTML = '<div class="empty-state">No study plans submitted yet</div>';
-                return;
-            }
-            
-            let html = '<div class="table-container"><table class="data-table">';
-            html += '<thead><tr><th>Period</th><th>Submitted</th><th>Certified</th><th>Cleared</th><th>Actions</th></tr></thead>';
-            html += '<tbody>';
-            
-            plans.forEach(plan => {
-                const certBadge = plan.certified ? '<span class="badge success">✓ Yes</span>' : '<span class="badge pending">No</span>';
-                const clearBadge = plan.cleared ? '<span class="badge success">✓ Cleared</span>' : '<span class="badge pending">Pending</span>';
-                
-                html += `
-                    <tr>
-                        <td><strong>${plan.academic_year} - ${plan.term}</strong></td>
-                        <td>${formatDate(plan.submission_date)}</td>
-                        <td>${certBadge}</td>
-                        <td>${clearBadge}</td>
-                        <td><a href="prof_study_plan_view.php?id=${plan.id}" class="btn btn-primary" style="padding: 6px 12px; font-size: 13px;">Review</a></td>
-                    </tr>
-                `;
-            });
-            
-            html += '</tbody></table></div>';
-            container.innerHTML = html;
-        }
         
         function loadConcerns() {
             fetch(`prof_api.php?action=get_student_concerns&student_id=${studentId}`)
