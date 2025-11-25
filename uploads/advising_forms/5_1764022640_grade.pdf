@@ -1,0 +1,229 @@
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Academic Advising Booklet - Maria Santos</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
+            
+            body {
+                font-family: 'Times New Roman', serif;
+                margin: 0;
+                padding: 0;
+                background: #ccc; /* Gray background for viewing */
+            }
+            .page {
+                background: white;
+                width: 8.5in;
+                height: 11in;
+                margin: 20px auto;
+                padding: 50px;
+                box-sizing: border-box;
+                box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                position: relative;
+                page-break-after: always;
+            }
+            @media print {
+                body { background: none; }
+                .page { margin: 0; box-shadow: none; height: 100vh; width: 100%; }
+                .no-print { display: none; }
+            }
+            
+            /* Utilities */
+            .text-center { text-align: center; }
+            .bold { font-weight: bold; }
+            .underline { border-bottom: 1px solid black; display: inline-block; min-width: 200px; }
+            .mt-50 { margin-top: 50px; }
+            .mb-20 { margin-bottom: 20px; }
+            
+            /* Page 1 Styles */
+            .university-header { margin-top: 50px; text-transform: uppercase; letter-spacing: 1px; }
+            .booklet-title { 
+                margin-top: 100px; 
+                border: 2px solid black; 
+                padding: 20px; 
+                display: inline-block; 
+                font-size: 24px; 
+                font-weight: bold;
+            }
+            .cover-info { margin-top: 150px; line-height: 2.5; font-size: 18px; }
+            
+            /* Page 2 Styles */
+            .info-table { width: 100%; margin-top: 50px; font-size: 16px; }
+            .info-table td { padding: 15px 0; border-bottom: 1px solid #eee; }
+            .info-label { font-weight: bold; width: 200px; }
+            .info-value { border-bottom: 1px solid black; padding-left: 10px; }
+
+            /* Term Page Styles */
+            .term-header { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 10px; font-style: italic; }
+            .ay-header { font-weight: bold; margin-bottom: 20px; }
+            
+            .course-table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin-bottom: 30px; 
+                border: 2px solid black;
+            }
+            .course-table th { 
+                border: 1px solid black; 
+                padding: 8px; 
+                text-align: center; 
+                font-weight: bold; 
+            }
+            .course-table td { 
+                border: 1px solid black; 
+                padding: 8px; 
+                height: 25px; /* Fixed height for empty rows */
+            }
+            
+            .footer-section { margin-top: 20px; }
+            .footer-row { display: flex; justify-content: space-between; margin-bottom: 15px; }
+            .footer-item { display: flex; align-items: baseline; width: 48%; }
+            .footer-label { font-weight: bold; margin-right: 10px; white-space: nowrap; }
+            .footer-line { border-bottom: 1px solid black; flex-grow: 1; text-align: center; padding-bottom: 2px;}
+
+            /* Retention Policy */
+            .policy-text { font-size: 14px; line-height: 1.6; text-align: justify; }
+            .policy-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; text-align: center; }
+        </style>
+    </head>
+    <body onload="window.print()">
+
+        <!-- PAGE 1: COVER -->
+        <div class="page text-center">
+            <div class="university-header">
+                <h2>DE LA SALLE UNIVERSITY</h2>
+                <h3>MANILA</h3>
+                <p>Gokongwei College of Engineering</p>
+            </div>
+
+            <div class="booklet-title">
+                Academic Advising<br>Booklet
+            </div>
+
+            <div class="cover-info">
+                <div>Student's Name: <span class="underline">Maria Santos</span></div>
+                <div>ID No.: <span class="underline">12012346</span></div>
+                <div>Academic Adviser's Name: <span class="underline">Roberto Fernandez</span></div>
+            </div>
+        </div>
+
+        <!-- PAGE 2: STUDENT DETAILS -->
+        <div class="page">
+            <h2 class="text-center">Student Information</h2>
+            <table class="info-table">
+                <tr>
+                    <td class="info-label">Student's ID Number</td>
+                    <td class="info-value">12012346</td>
+                </tr>
+                <tr>
+                    <td class="info-label">Course</td>
+                    <td class="info-value">BS Computer Engineering</td>
+                </tr>
+                <tr>
+                    <td class="info-label">Specialization</td>
+                    <td class="info-value">N/A</td>
+                </tr>
+                <tr>
+                    <td class="info-label">Phone Number</td>
+                    <td class="info-value">+63 917 234 5678</td>
+                </tr>
+                <tr>
+                    <td class="info-label">Email Address</td>
+                    <td class="info-value">maria.santos@dlsu.edu.ph</td>
+                </tr>
+                <tr>
+                    <td class="info-label">Parent's Name</td>
+                    <td class="info-value">Roberto Santos</td>
+                </tr>
+                <tr>
+                    <td class="info-label">Parent's Contact</td>
+                    <td class="info-value">+63 918 876 5432</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- TERM PAGES LOOP -->
+                <div class="page">
+            <div class="ay-header">
+                Academic Year/Term: <span style="border-bottom: 1px solid black; padding: 0 20px;">2024-2025 / Term 1</span>
+            </div>
+
+            <div class="term-header">"First Term"</div>
+
+            <table class="course-table">
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">Course Code</th>
+                        <th style="width: 15%;">Units</th>
+                        <th style="width: 15%;">Grade</th>
+                        <th style="width: 50%;">Remarks (Course Name)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td class='text-center'>CSMCPRO</td><td class='text-center'>3</td><td class='text-center'>4.00</td><td>Microprocessors</td></tr><tr><td class='text-center'>CSNETWK</td><td class='text-center'>3</td><td class='text-center'></td><td>Computer Networks</td></tr><tr><td></td><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td><td></td></tr>                </tbody>
+            </table>
+
+            <div class="footer-section">
+                <div class="footer-row">
+                    <div class="footer-item">
+                        <span class="footer-label">Term GPA:</span>
+                        <div class="footer-line"></div>
+                    </div>
+                    <div class="footer-item">
+                        <span class="footer-label">CGPA:</span>
+                        <div class="footer-line"></div>
+                    </div>
+                </div>
+
+                <div class="footer-row">
+                    <div class="footer-item" style="width: 100%;">
+                        <span class="footer-label">Accumulated Failure (Units):</span>
+                        <div class="footer-line"></div>
+                    </div>
+                </div>
+
+                <div class="footer-row">
+                    <div class="footer-item" style="width: 100%;">
+                        <span class="footer-label">Trimestral Honors:</span>
+                        <div class="footer-line"></div>
+                    </div>
+                </div>
+
+                <div class="footer-row" style="margin-top: 30px;">
+                    <div class="footer-item" style="width: 100%;">
+                        <span class="footer-label">Adviser's Signature and Date:</span>
+                        <div class="footer-line"></div>
+                    </div>
+                </div>
+
+                <div class="footer-row">
+                    <div class="footer-item" style="width: 100%;">
+                        <span class="footer-label">Adviser's Note:</span>
+                        <div class="footer-line"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- LAST PAGE: RETENTION POLICY -->
+        <div class="page">
+            <div class="policy-title">Retention Policy</div>
+            <div class="policy-text">
+                <p><strong>10.17 Eligibility to continue academic studies in a degree program is covered by the following guidelines:</strong></p>
+                
+                <p><strong>10.17.1</strong> The following are ineligible to continue studies in the current degree program: For students with ID number 102 and above who are under the Liberal Arts, Science, Business, Economics, and Education single degree programs who have accumulated 24 units of failure; under the Computer Studies programs who have accumulated 27 units of failure; and under the LIA-COM, Engineering, COM-COM and Education double degree programs who have accumulated 30 units of failure in academic courses at the end of any trimester.</p>
+
+                <p><strong>10.17.2</strong> Students who are ineligible to continue in their current program may apply to shift to another program. They must comply with the rules on shifting as stipulated in section 2.5, and follow the schedule as posted by the Office of the University Registrar. Students should file for a leave of absence if they cannot continue in the current program but are unable to shift on time.</p>
+
+                <p><strong>10.17.3</strong> Any failure incurred is automatically added to previous accumulated units of failure. Only students who have not reached the maximum allowable accumulated failures may re-enroll any failed course. If a student receives a grade of 2.5 or higher in the re-enrolled failed course, the original failure will not be counted in the accumulation of the number of units failed.</p>
+
+                <p><strong>10.17.6</strong> Laguna Campus students with ID 112 and below who obtain a CGPA of less than 1.000 at any given term after their third term in the University are not allowed to re-enroll.</p>
+                
+                <p style="margin-top: 30px; font-style: italic;">Source: De La Salle University Student Handbook 2021-2025, page 105-106</p>
+            </div>
+        </div>
+
+    </body>
+    </html>
+    
