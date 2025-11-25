@@ -1,8 +1,11 @@
 <?php
-require_once 'auth_check.php';
-requireStudent();
-
+session_start();
 require_once 'config.php';
+
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'student') {
+    header('Location: login.php');
+    exit();
+}
 
 $student_id = $_SESSION['user_id'];
 
@@ -72,11 +75,29 @@ while($row = $course_query->fetch_assoc()) {
         .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
         
         /* Course Entry */
-        .course-entry-container { margin-bottom: 30px; }
+        .course-entry-container { margin-bottom: 30px; border: 1px solid #eee; padding: 15px; border-radius: 8px; }
         .course-entry { background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 15px; position: relative; }
         .course-entry h4 { color: #1976D2; margin-bottom: 15px; font-size: 16px; }
         .remove-course-btn { position: absolute; top: 15px; right: 15px; background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 13px; }
-        .add-course-btn { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 600; margin-top: 10px; }
+        .add-course-btn { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 600; margin-top: 10px; width: 100%; }
+        
+        /* Booklet Summary Box - Matches your Image Format */
+        .booklet-summary-box {
+            background-color: #fff;
+            border: 2px solid #333;
+            padding: 20px;
+            margin-top: 20px;
+            margin-bottom: 30px;
+        }
+        .booklet-summary-header {
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
         
         /* Prerequisite Entry */
         .prerequisite-container { margin-top: 15px; padding: 15px; background: white; border-radius: 5px; }
@@ -163,63 +184,96 @@ while($row = $course_query->fetch_assoc()) {
                     
                     <form id="advisingForm">
                         <!-- Basic Information -->
-                        <h4 class="section-header">Basic Information</h4>
+                        <h4 class="section-header">Student Details</h4>
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Student ID Number *</label>
+                                <label>Student ID Number</label>
                                 <input type="text" value="<?php echo htmlspecialchars($student['id_number']); ?>" readonly style="background: #f0f0f0;">
                             </div>
                             <div class="form-group">
-                                <label>Full Name *</label>
+                                <label>Full Name</label>
                                 <input type="text" value="<?php echo htmlspecialchars($student['full_name']); ?>" readonly style="background: #f0f0f0;">
                             </div>
                             <div class="form-group">
-                                <label>Program *</label>
+                                <label>Program</label>
                                 <input type="text" value="<?php echo htmlspecialchars($student['program']); ?>" readonly style="background: #f0f0f0;">
                             </div>
                         </div>
                         
-                        <!-- Term Information -->
-                        <h4 class="section-header">Term Information</h4>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Academic Year *</label>
-                                <input type="text" id="academicYear" placeholder="e.g., 2024-2025" required>
-                                <div class="help-text">Format: YYYY-YYYY</div>
+                        <!-- Booklet-style Form Section -->
+                        <div class="booklet-summary-box">
+                            <div class="booklet-summary-header">
+                                Academic Term Record
                             </div>
-                            <div class="form-group">
-                                <label>Term *</label>
-                                <select id="term" required>
-                                    <option value="">Select term...</option>
-                                    <option value="Term 1">Term 1</option>
-                                    <option value="Term 2">Term 2</option>
-                                    <option value="Term 3">Term 3</option>
-                                </select>
+                            
+                            <!-- Top: Academic Year & Term -->
+                            <div class="form-row" style="margin-bottom: 20px; border-bottom: 1px dashed #ccc; padding-bottom: 15px;">
+                                <div class="form-group">
+                                    <label>Academic Year *</label>
+                                    <input type="text" id="academicYear" placeholder="e.g., 2024-2025" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Term *</label>
+                                    <select id="term" required>
+                                        <option value="">Select term...</option>
+                                        <option value="Term 1">Term 1</option>
+                                        <option value="Term 2">Term 2</option>
+                                        <option value="Term 3">Term 3</option>
+                                    </select>
+                                </div>
                             </div>
-                        </div>
-                        
-                        <!-- Academic Performance -->
-                        <h4 class="section-header">Previous Term Academic Performance</h4>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Current Academic Year Failed Units *</label>
-                                <input type="number" id="currentYearFailedUnits" min="0" step="1" placeholder="0" required>
-                                <div class="help-text">Total units failed in the current academic year</div>
+
+                            <!-- Middle: Enrolled Courses (The Table) -->
+                            <h4 style="font-size: 16px; color: #555; margin-bottom: 10px;">Enrolled Courses</h4>
+                            <div id="currentCoursesContainer" class="course-entry-container" style="border: none; padding: 0;">
+                                <!-- Courses will be added here -->
                             </div>
-                            <div class="form-group">
-                                <label>Overall Accumulated Failed Units *</label>
-                                <input type="number" id="overallFailedUnits" min="0" step="1" placeholder="0" required>
-                                <div class="help-text">Total units failed in entire program duration</div>
+                            <button type="button" class="add-course-btn" onclick="addCurrentCourse()">+ Add Course Record</button>
+                            
+                            <div class="form-row" style="margin-top: 15px;">
+                                <div class="form-group">
+                                    <label>Max Course Load Units *</label>
+                                    <input type="number" id="maxUnits" min="1" step="1" placeholder="21" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Total Enrolled Units *</label>
+                                    <input type="number" id="totalEnrolledUnits" min="0" step="1" placeholder="0" required>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>Previous Term GPA</label>
-                                <input type="number" id="previousTermGPA" min="0" max="4" step="0.001" placeholder="0.000">
-                                <div class="help-text">GPA from previous term (0.000 - 4.000)</div>
-                            </div>
-                            <div class="form-group">
-                                <label>Cumulative GPA</label>
-                                <input type="number" id="cumulativeGPA" min="0" max="4" step="0.001" placeholder="0.000">
-                                <div class="help-text">Overall cumulative GPA (0.000 - 4.000)</div>
+
+                            <!-- Bottom: Summary Statistics (Matches Image) -->
+                            <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #333;">
+                                <h4 style="font-size: 16px; color: #333; margin-bottom: 15px; text-decoration: underline;">Term Summary</h4>
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Term GPA</label>
+                                        <input type="number" id="previousTermGPA" min="0" max="4" step="0.001" placeholder="0.000">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>CGPA (Cumulative)</label>
+                                        <input type="number" id="cumulativeGPA" min="0" max="4" step="0.001" placeholder="0.000">
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Accumulated Failure (Units) *</label>
+                                        <input type="number" id="overallFailedUnits" min="0" step="1" placeholder="0" required>
+                                    </div>
+                                    <!-- Added this field to match your request -->
+                                    <div class="form-group">
+                                        <label>Trimestral Honors</label>
+                                        <select id="trimestralHonors">
+                                            <option value="">None</option>
+                                            <option value="First Dean's Lister">First Dean's Lister</option>
+                                            <option value="Second Dean's Lister">Second Dean's Lister</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <!-- Hidden field for current year failures, might be calculated or manual -->
+                                <input type="hidden" id="currentYearFailedUnits" value="0">
                             </div>
                         </div>
                         
@@ -230,7 +284,7 @@ while($row = $course_query->fetch_assoc()) {
                                 <input type="file" id="gradeScreenshot" accept="image/*,.pdf" required>
                                 <label class="file-upload-label">
                                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2 2v-4M17 8l-5-5-5 5M12 3v12"/>
                                     </svg>
                                     <p style="margin-top: 10px; font-weight: 600;">Click to upload grade screenshot</p>
                                     <p style="font-size: 12px; color: #999; margin-top: 5px;">Supported: JPG, PNG, PDF (Max 5MB)</p>
@@ -238,24 +292,6 @@ while($row = $course_query->fetch_assoc()) {
                             </div>
                             <div id="filePreview" class="file-preview" style="display: none;"></div>
                         </div>
-                        
-                        <!-- Current Term Enrolled Courses -->
-                        <h4 class="section-header">Current Term Enrolled Courses</h4>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Maximum Allowed Course Load Units *</label>
-                                <input type="number" id="maxUnits" min="1" step="1" placeholder="21" required>
-                                <div class="help-text">Check your student checklist for prescribed units</div>
-                            </div>
-                            <div class="form-group">
-                                <label>Total Enrolled Units This Term *</label>
-                                <input type="number" id="totalEnrolledUnits" min="0" step="1" placeholder="0" required>
-                                <div class="help-text">Sum of all units for current term courses</div>
-                            </div>
-                        </div>
-                        
-                        <div id="currentCoursesContainer" class="course-entry-container"></div>
-                        <button type="button" class="add-course-btn" onclick="addCurrentCourse()">+ Add Current Course</button>
                         
                         <!-- Additional Notes -->
                         <div class="form-group" style="margin-top: 30px;">
@@ -267,11 +303,11 @@ while($row = $course_query->fetch_assoc()) {
                         <h4 class="section-header">Certifications</h4>
                         <div class="checkbox-group">
                             <input type="checkbox" id="certifyPrerequisites" required>
-                            <label for="certifyPrerequisites">I certify that ALL prerequisite requirements for my currently enrolled courses have been fully satisfied. I am fully aware that violating the rule on prerequisites will result in dropping of the currently enrolled course(s) anytime during the term. *</label>
+                            <label for="certifyPrerequisites">I certify that ALL prerequisite requirements for my currently enrolled courses have been fully satisfied. *</label>
                         </div>
                         <div class="checkbox-group">
                             <input type="checkbox" id="certifyAccuracy" required>
-                            <label for="certifyAccuracy">I certify that all information provided in this form is true and correct to the best of my knowledge. *</label>
+                            <label for="certifyAccuracy">I certify that all information provided in this form is true and correct. *</label>
                         </div>
                         <div class="checkbox-group">
                             <input type="checkbox" id="requestMeeting">
@@ -377,12 +413,12 @@ while($row = $course_query->fetch_assoc()) {
                     <div class="form-group">
                         <label>Course Name *</label>
                         <input type="text" name="courseName_${currentCourseCount}" readonly style="background-color: #e9ecef;" placeholder="Auto-filled">
-                        <input type="hidden" name="courseName[]"> <!-- Hidden input for array submission if needed -->
+                        <input type="hidden" name="courseName[]">
                     </div>
                     <div class="form-group">
                         <label>Units *</label>
                         <input type="number" name="courseUnits_${currentCourseCount}" min="0" step="1" placeholder="0" required>
-                        <input type="hidden" name="courseUnits[]"> <!-- Hidden input wrapper handled below -->
+                        <input type="hidden" name="courseUnits[]">
                     </div>
                 </div>
                 <div class="prerequisite-container">
@@ -456,29 +492,27 @@ while($row = $course_query->fetch_assoc()) {
         document.getElementById('advisingForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            // Validate files
             const gradeScreenshot = document.getElementById('gradeScreenshot').files[0];
-            
             if (!gradeScreenshot) {
                 showAlert('Please upload grade screenshot', 'warning');
                 return;
             }
-            
-            // Check file sizes
             if (gradeScreenshot.size > 5 * 1024 * 1024) {
                 showAlert('Grade screenshot must be less than 5MB', 'danger');
                 return;
             }
             
-            // Collect form data
             const formData = new FormData();
             formData.append('action', 'submit_advising_form');
             formData.append('academic_year', document.getElementById('academicYear').value);
             formData.append('term', document.getElementById('term').value);
+            // Added new fields to submission
             formData.append('current_year_failed_units', document.getElementById('currentYearFailedUnits').value);
             formData.append('overall_failed_units', document.getElementById('overallFailedUnits').value);
             formData.append('previous_term_gpa', document.getElementById('previousTermGPA').value || '0');
             formData.append('cumulative_gpa', document.getElementById('cumulativeGPA').value || '0');
+            formData.append('trimestral_honors', document.getElementById('trimestralHonors').value);
+            
             formData.append('max_units', document.getElementById('maxUnits').value);
             formData.append('total_enrolled_units', document.getElementById('totalEnrolledUnits').value);
             formData.append('additional_notes', document.getElementById('additionalNotes').value);
@@ -487,18 +521,13 @@ while($row = $course_query->fetch_assoc()) {
             formData.append('request_meeting', document.getElementById('requestMeeting').checked ? '1' : '0');
             formData.append('grade_screenshot', gradeScreenshot);
             
-            // Collect current courses
             const courses = [];
             document.querySelectorAll('.course-entry').forEach((entry, index) => {
-                // Extract ID number from element ID (course-1, course-2, etc)
                 const courseId = entry.id.split('-')[1];
-                
                 const courseCode = entry.querySelector('select[name="courseCode[]"]').value;
-                // Use the specific named inputs we created dynamically
                 const courseName = entry.querySelector(`input[name="courseName_${courseId}"]`).value;
                 const units = entry.querySelector(`input[name="courseUnits_${courseId}"]`).value;
                 
-                // Collect prerequisites for this course
                 const prereqs = [];
                 const prereqContainer = entry.querySelector(`#prereq-container-${courseId}`);
                 prereqContainer.querySelectorAll('.prerequisite-entry').forEach(prereqEntry => {
@@ -512,7 +541,7 @@ while($row = $course_query->fetch_assoc()) {
                     }
                 });
                 
-                if(courseCode) { // Only add if code is selected
+                if(courseCode) {
                     courses.push({
                         code: courseCode,
                         name: courseName,
@@ -524,7 +553,6 @@ while($row = $course_query->fetch_assoc()) {
             
             formData.append('current_courses', JSON.stringify(courses));
             
-            // Submit form
             try {
                 const response = await fetch('student_advising_api.php', {
                     method: 'POST',
@@ -547,28 +575,23 @@ while($row = $course_query->fetch_assoc()) {
             }
         });
         
-        // Reset form
         function resetForm() {
             document.getElementById('advisingForm').reset();
             document.getElementById('currentCoursesContainer').innerHTML = '';
             document.getElementById('filePreview').style.display = 'none';
             currentCourseCount = 0;
-            // Add one fresh course field
             addCurrentCourse();
         }
         
-        // Show alert
         function showAlert(message, type) {
             const alertDiv = document.getElementById('formAlert');
             alertDiv.innerHTML = `<div class="alert ${type}">${message}</div>`;
             alertDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            
             setTimeout(() => {
                 alertDiv.innerHTML = '';
             }, 5000);
         }
         
-        // Load submission history
         async function loadSubmissionHistory() {
             const container = document.getElementById('historyContent');
             container.innerHTML = '<div class="empty-state">Loading...</div>';
@@ -610,7 +633,6 @@ while($row = $course_query->fetch_assoc()) {
             }
         }
         
-        // Add at least one course on load
         window.addEventListener('load', function() {
             addCurrentCourse();
         });

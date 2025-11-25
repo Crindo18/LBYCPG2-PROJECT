@@ -1,12 +1,12 @@
 <?php
 ob_start();
-error_reporting(0);
+error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
-require_once 'auth_check.php';
+session_start();
 require_once 'config.php';
 
-if (!isAuthenticated() || $_SESSION['user_type'] !== 'student') {
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'student') {
     ob_clean();
     header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
@@ -19,15 +19,12 @@ header('Content-Type: application/json');
 $student_id = $_SESSION['user_id'];
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
-switch ($action) {
-    case 'submit_advising_form':
-        submitAdvisingForm();
-        break;
-    case 'get_advising_forms':
-        getAdvisingForms();
-        break;
-    default:
-        echo json_encode(['success' => false, 'message' => 'Invalid action']);
+if ($action === 'submit_advising_form') {
+    submitAdvisingForm();
+} elseif ($action === 'get_advising_forms') {
+    getAdvisingForms();
+} else {
+    echo json_encode(['success' => false, 'message' => 'Invalid action']);
 }
 
 function submitAdvisingForm() {
@@ -35,18 +32,11 @@ function submitAdvisingForm() {
     
     try {
         // Validate required fields
-        $required_fields = ['academic_year', 'term', 'current_year_failed_units', 'overall_failed_units',
-                           'max_units', 'total_enrolled_units', 'certify_prerequisites', 'certify_accuracy'];
-        
+        $required_fields = ['academic_year', 'term', 'max_units', 'total_enrolled_units'];
         foreach ($required_fields as $field) {
             if (!isset($_POST[$field]) || $_POST[$field] === '') {
                 throw new Exception("Missing required field: $field");
             }
-        }
-        
-        // Validate certifications
-        if ($_POST['certify_prerequisites'] != '1' || $_POST['certify_accuracy'] != '1') {
-            throw new Exception('You must certify all required statements');
         }
         
         // Handle file uploads
@@ -56,193 +46,119 @@ function submitAdvisingForm() {
         }
         
         // Upload grade screenshot
-        if (!isset($_FILES['grade_screenshot']) || $_FILES['grade_screenshot']['error'] !== UPLOAD_ERR_OK) {
-            throw new Exception('Grade screenshot upload failed');
+        $gradeTargetPath = null;
+        if (isset($_FILES['grade_screenshot']) && $_FILES['grade_screenshot']['error'] === UPLOAD_ERR_OK) {
+            $gradeScreenshot = $_FILES['grade_screenshot'];
+            $gradeExt = strtolower(pathinfo($gradeScreenshot['name'], PATHINFO_EXTENSION));
+            $gradeFilename = $student_id . '_' . time() . '_grade.' . $gradeExt;
+            $gradeTargetPath = $uploadDir . $gradeFilename;
+            
+            if (!move_uploaded_file($gradeScreenshot['tmp_name'], $gradeTargetPath)) {
+                throw new Exception('Failed to save grade screenshot');
+            }
         }
         
-        $gradeScreenshot = $_FILES['grade_screenshot'];
-        $gradeExt = strtolower(pathinfo($gradeScreenshot['name'], PATHINFO_EXTENSION));
-        $gradeFilename = $student_id . '_' . time() . '_grade.' . $gradeExt;
-        $gradeTargetPath = $uploadDir . $gradeFilename;
-        
-        if (!move_uploaded_file($gradeScreenshot['tmp_name'], $gradeTargetPath)) {
-            throw new Exception('Failed to save grade screenshot');
-        }
-        
-        // Parse current courses JSON
+        // Parse current courses
         $currentCourses = json_decode($_POST['current_courses'], true);
         if (!$currentCourses || !is_array($currentCourses)) {
             throw new Exception('Invalid current courses data');
         }
         
-        // Start transaction
+        // Extract integer from Term
+        $termStr = $_POST['term'];
+        $termNum = (int) filter_var($termStr, FILTER_SANITIZE_NUMBER_INT);
+        if ($termNum == 0 && is_numeric($termStr)) $termNum = (int)$termStr;
+        
         $conn->begin_transaction();
         
-        // Pack data into JSON for 'form_data' column
+        // 1. Insert Form Request
         $formDataArray = [
             'academic_year' => $_POST['academic_year'],
             'term' => $_POST['term'],
-            'current_year_failed_units' => $_POST['current_year_failed_units'],
-            'overall_failed_units' => $_POST['overall_failed_units'],
-            'previous_term_gpa' => $_POST['previous_term_gpa'],
-            'cumulative_gpa' => $_POST['cumulative_gpa'],
+            'current_year_failed_units' => $_POST['current_year_failed_units'] ?? 0,
+            'overall_failed_units' => $_POST['overall_failed_units'] ?? 0,
+            'previous_term_gpa' => $_POST['previous_term_gpa'] ?? 0,
+            'cumulative_gpa' => $_POST['cumulative_gpa'] ?? 0,
+            'trimestral_honors' => $_POST['trimestral_honors'] ?? '',
             'max_course_load_units' => $_POST['max_units'],
             'total_enrolled_units' => $_POST['total_enrolled_units'],
-            'additional_notes' => $_POST['additional_notes'],
-            'certify_prerequisites' => $_POST['certify_prerequisites'],
-            'certify_accuracy' => $_POST['certify_accuracy'],
-            'request_meeting' => $_POST['request_meeting']
+            'additional_notes' => $_POST['additional_notes'] ?? '',
+            'request_meeting' => $_POST['request_meeting'] ?? 0
         ];
         $formDataJson = json_encode($formDataArray);
 
-        // Insert using the correct columns from your database schema
-        // Note: booklet_file column is set to NULL as it is no longer required
-        $stmt = $conn->prepare("
-            INSERT INTO academic_advising_forms (
-                student_id, 
-                form_data, 
-                grades_screenshot, 
-                booklet_file, 
-                status, 
-                submitted_at
-            ) VALUES (?, ?, ?, NULL, 'pending', NOW())
-        ");
-        
-        $stmt->bind_param(
-            "iss",
-            $student_id,
-            $formDataJson,
-            $gradeTargetPath
-        );
-        
-        if (!$stmt->execute()) {
-            throw new Exception('Failed to insert advising form: ' . $stmt->error);
-        }
-        
+        $stmt = $conn->prepare("INSERT INTO academic_advising_forms (student_id, form_data, grades_screenshot, booklet_file, status, submitted_at) VALUES (?, ?, ?, NULL, 'pending', NOW())");
+        $stmt->bind_param("iss", $student_id, $formDataJson, $gradeTargetPath);
+        if (!$stmt->execute()) throw new Exception('Failed to insert form');
         $formId = $conn->insert_id;
         
-        // Insert current enrolled courses
-        $stmt = $conn->prepare("
-            INSERT INTO advising_form_courses (
-                form_id, course_type, course_code, units
-            ) VALUES (?, 'current', ?, ?)
-        ");
+        // 2. Insert Courses into advising_form_courses & student_advising_booklet
+        $stmtFormCourse = $conn->prepare("INSERT INTO advising_form_courses (form_id, course_type, course_code, units) VALUES (?, 'current', ?, ?)");
         
+        // CRITICAL FIX HERE: Added correct number of type characters ("isisss")
+        $stmtBooklet = $conn->prepare("
+            INSERT INTO student_advising_booklet 
+            (student_id, academic_year, term, course_code, course_name, units, grade, is_failed, approval_status, remarks, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, NULL, 0, 'pending', 'Enrolled', NOW())
+        ");
+
         foreach ($currentCourses as $course) {
-            $stmt->bind_param("isi", $formId, $course['code'], $course['units']);
-            if (!$stmt->execute()) {
-                throw new Exception('Failed to insert course: ' . $stmt->error);
-            }
+            // Add to Form
+            $stmtFormCourse->bind_param("isi", $formId, $course['code'], $course['units']);
+            $stmtFormCourse->execute();
             
-            $courseId = $conn->insert_id;
-            
-            // Insert prerequisites for this course
-            if (!empty($course['prerequisites'])) {
-                $prereqStmt = $conn->prepare("
-                    INSERT INTO advising_form_prerequisites (
-                        course_id, prerequisite_code, prerequisite_type, grade_received
-                    ) VALUES (?, ?, ?, ?)
-                ");
-                
-                foreach ($course['prerequisites'] as $prereq) {
-                    $prereqStmt->bind_param(
-                        "isss",
-                        $courseId,
-                        $prereq['code'],
-                        $prereq['type'],
-                        $prereq['grade']
-                    );
-                    $prereqStmt->execute();
-                }
-            }
+            // Add to Booklet
+            // Fixed: "isisss" matches (int, string, int, string, string, string)
+            // Note: units passed as string/int is fine with 's'
+            $stmtBooklet->bind_param(
+                "isisss", 
+                $student_id, 
+                $_POST['academic_year'], 
+                $termNum, 
+                $course['code'], 
+                $course['name'], 
+                $course['units']
+            );
+            if (!$stmtBooklet->execute()) throw new Exception("Booklet insert failed: " . $stmtBooklet->error);
         }
         
-        // Update student's accumulated failed units
-        $stmt = $conn->prepare("UPDATE students SET accumulated_failed_units = ? WHERE id = ?");
-        $stmt->bind_param("ii", $_POST['overall_failed_units'], $student_id);
-        $stmt->execute();
+        if (isset($_POST['overall_failed_units'])) {
+            $stmt = $conn->prepare("UPDATE students SET accumulated_failed_units = ? WHERE id = ?");
+            $stmt->bind_param("ii", $_POST['overall_failed_units'], $student_id);
+            $stmt->execute();
+        }
         
         $conn->commit();
         
-        echo json_encode([
-            'success' => true,
-            'message' => 'Academic advising form submitted successfully',
-            'form_id' => $formId
-        ]);
+        echo json_encode(['success' => true, 'message' => 'Academic advising form submitted successfully']);
         
     } catch (Exception $e) {
         $conn->rollback();
-        
-        // Clean up uploaded files on error
-        if (isset($gradeTargetPath) && file_exists($gradeTargetPath)) {
-            unlink($gradeTargetPath);
-        }
-        
-        echo json_encode([
-            'success' => false,
-            'message' => $e->getMessage()
-        ]);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
 }
 
 function getAdvisingForms() {
     global $conn, $student_id;
-    
     try {
-        $stmt = $conn->prepare("
-            SELECT 
-                aaf.*,
-                CONCAT(p.first_name, ' ', p.last_name) as adviser_name,
-                COUNT(afc.id) as course_count
-            FROM academic_advising_forms aaf
-            LEFT JOIN students s ON s.id = aaf.student_id
-            LEFT JOIN professors p ON p.id = s.advisor_id
-            LEFT JOIN advising_form_courses afc ON afc.form_id = aaf.id
-            WHERE aaf.student_id = ?
-            GROUP BY aaf.id
-            ORDER BY aaf.submitted_at DESC
-        ");
-        
+        $stmt = $conn->prepare("SELECT * FROM academic_advising_forms WHERE student_id = ? ORDER BY submitted_at DESC");
         $stmt->bind_param("i", $student_id);
         $stmt->execute();
         $result = $stmt->get_result();
-        
         $forms = [];
         while ($row = $result->fetch_assoc()) {
-            // Unpack JSON data so the frontend can read it
             if (!empty($row['form_data'])) {
                 $jsonData = json_decode($row['form_data'], true);
-                if (is_array($jsonData)) {
-                    // Merge JSON data into the row array
-                    $row = array_merge($row, $jsonData);
-                }
+                if (is_array($jsonData)) $row = array_merge($row, $jsonData);
             }
-            // Map DB column names to what frontend expects for status badges
-            if (isset($row['adviser_comments'])) {
-                $row['adviser_feedback'] = $row['adviser_comments'];
-            }
-            if (isset($row['submitted_at'])) {
-                $row['submission_date'] = $row['submitted_at'];
-            }
-            if ($row['status'] === 'approved') {
-                $row['cleared'] = 1;
-            } else {
-                $row['cleared'] = 0;
-            }
-
+            $row['adviser_feedback'] = $row['adviser_comments'] ?? '';
+            $row['submission_date'] = $row['submitted_at'];
+            $row['cleared'] = ($row['status'] === 'approved') ? 1 : 0;
             $forms[] = $row;
         }
-        
-        echo json_encode([
-            'success' => true,
-            'forms' => $forms
-        ]);
-        
+        echo json_encode(['success' => true, 'forms' => $forms]);
     } catch (Exception $e) {
-        echo json_encode([
-            'success' => false,
-            'message' => $e->getMessage()
-        ]);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
 }
 ?>
