@@ -269,15 +269,6 @@ function addSingleStudent() {
         $guardianName = $_POST['guardian_name'];
         $guardianPhone = $_POST['guardian_phone'];
         
-        // Check if ID already exists in students table
-        $stmt = $conn->prepare("SELECT id FROM students WHERE id_number = ?");
-        $stmt->bind_param("i", $idNumber);
-        $stmt->execute();
-        if ($stmt->get_result()->num_rows > 0) {
-            echo json_encode(['success' => false, 'message' => 'Student ID already exists']);
-            return;
-        }
-        
         // Check if ID already exists in user_login_info table
         $stmt = $conn->prepare("SELECT id FROM user_login_info WHERE id_number = ?");
         $stmt->bind_param("s", $idNumber);
@@ -290,15 +281,7 @@ function addSingleStudent() {
         // Begin transaction
         $conn->begin_transaction();
         
-        // Step 1: Insert into students table
-        $stmt = $conn->prepare("INSERT INTO students (id_number, first_name, middle_name, last_name, college, department, program, specialization, phone_number, email, parent_guardian_name, parent_guardian_number, advising_cleared, accumulated_failed_units) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)");
-        $stmt->bind_param("isssssssssss", $idNumber, $firstName, $middleName, $lastName, $college, $department, $program, $specialization, $phone, $email, $guardianName, $guardianPhone);
-        
-        if (!$stmt->execute()) {
-            throw new Exception('Failed to insert into students table: ' . $stmt->error);
-        }
-        
-        // Step 2: Hash password and insert into user_login_info table
+        // Step 1: Hash password and insert into user_login_info table FIRST
         $passwordHash = password_hash($idNumber, PASSWORD_DEFAULT);
         $userType = 'student';
         
@@ -307,6 +290,17 @@ function addSingleStudent() {
         
         if (!$stmt->execute()) {
             throw new Exception('Failed to insert into user_login_info table: ' . $stmt->error);
+        }
+        
+        // Get the auto-generated ID from user_login_info
+        $userId = $conn->insert_id;
+        
+        // Step 2: Insert into students table using the same ID
+        $stmt = $conn->prepare("INSERT INTO students (id, id_number, first_name, middle_name, last_name, college, department, program, specialization, phone_number, email, parent_guardian_name, parent_guardian_number, advising_cleared, accumulated_failed_units) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)");
+        $stmt->bind_param("iisssssssssss", $userId, $idNumber, $firstName, $middleName, $lastName, $college, $department, $program, $specialization, $phone, $email, $guardianName, $guardianPhone);
+        
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to insert into students table: ' . $stmt->error);
         }
         
         // Commit transaction
@@ -411,15 +405,6 @@ function addSingleProfessor() {
         $department = $_POST['department'];
         $email = $_POST['email'];
         
-        // Check if ID already exists in professors table
-        $stmt = $conn->prepare("SELECT id FROM professors WHERE id_number = ?");
-        $stmt->bind_param("i", $idNumber);
-        $stmt->execute();
-        if ($stmt->get_result()->num_rows > 0) {
-            echo json_encode(['success' => false, 'message' => 'Professor ID already exists']);
-            return;
-        }
-        
         // Check if ID already exists in user_login_info table
         $stmt = $conn->prepare("SELECT id FROM user_login_info WHERE id_number = ?");
         $stmt->bind_param("s", $idNumber);
@@ -432,15 +417,7 @@ function addSingleProfessor() {
         // Begin transaction
         $conn->begin_transaction();
         
-        // Step 1: Insert into professors table
-        $stmt = $conn->prepare("INSERT INTO professors (id_number, first_name, middle_name, last_name, department, email) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("isssss", $idNumber, $firstName, $middleName, $lastName, $department, $email);
-        
-        if (!$stmt->execute()) {
-            throw new Exception('Failed to insert into professors table: ' . $stmt->error);
-        }
-        
-        // Step 2: Hash password and insert into user_login_info table
+        // Step 1: Hash password and insert into user_login_info table FIRST
         $passwordHash = password_hash($idNumber, PASSWORD_DEFAULT);
         $userType = 'professor';
         
@@ -449,6 +426,17 @@ function addSingleProfessor() {
         
         if (!$stmt->execute()) {
             throw new Exception('Failed to insert into user_login_info table: ' . $stmt->error);
+        }
+        
+        // Get the auto-generated ID from user_login_info
+        $userId = $conn->insert_id;
+        
+        // Step 2: Insert into professors table using the same ID
+        $stmt = $conn->prepare("INSERT INTO professors (id, id_number, first_name, middle_name, last_name, department, email) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("iisssss", $userId, $idNumber, $firstName, $middleName, $lastName, $department, $email);
+        
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to insert into professors table: ' . $stmt->error);
         }
         
         // Commit transaction
