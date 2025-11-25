@@ -26,6 +26,9 @@ switch ($action) {
     case 'get_recent_plans':
         getRecentPlans();
         break;
+    case 'get_recent_advising_forms':
+        getRecentAdvisingForms();
+        break;
     case 'get_attention_students':
         getAttentionStudents();
         break;
@@ -93,21 +96,30 @@ switch ($action) {
 function getDashboardStats() {
     global $conn, $professor_id;
     
+    // Total advisees
     $stmt = $conn->prepare("SELECT COUNT(*) as total FROM students WHERE advisor_id = ?");
     $stmt->bind_param("i", $professor_id);
     $stmt->execute();
     $total_advisees = $stmt->get_result()->fetch_assoc()['total'];
     
-    $stmt = $conn->prepare("SELECT COUNT(DISTINCT sp.id) as pending FROM study_plans sp JOIN students s ON s.id = sp.student_id WHERE s.advisor_id = ?");
+    // Pending advising forms
+    $stmt = $conn->prepare("
+        SELECT COUNT(*) as pending 
+        FROM academic_advising_forms aaf
+        JOIN students s ON s.id = aaf.student_id
+        WHERE s.advisor_id = ? AND aaf.status = 'pending'
+    ");
     $stmt->bind_param("i", $professor_id);
     $stmt->execute();
-    $pending_plans = $stmt->get_result()->fetch_assoc()['pending'];
+    $pending_forms = $stmt->get_result()->fetch_assoc()['pending'];
     
+    // Cleared students
     $stmt = $conn->prepare("SELECT COUNT(*) as cleared FROM students WHERE advisor_id = ? AND advising_cleared = 1");
     $stmt->bind_param("i", $professor_id);
     $stmt->execute();
     $cleared_students = $stmt->get_result()->fetch_assoc()['cleared'];
     
+    // At-risk students
     $stmt = $conn->prepare("SELECT COUNT(*) as at_risk FROM students WHERE advisor_id = ? AND accumulated_failed_units >= 15");
     $stmt->bind_param("i", $professor_id);
     $stmt->execute();
@@ -117,18 +129,19 @@ function getDashboardStats() {
         'success' => true,
         'stats' => [
             'total_advisees' => $total_advisees,
-            'pending_plans' => $pending_plans,
+            'pending_forms' => $pending_forms,
             'cleared_students' => $cleared_students,
             'at_risk_students' => $at_risk_students
         ]
     ]);
 }
 
+
 function getRecentPlans() {
     global $conn, $professor_id;
-    
+
     $stmt = $conn->prepare("
-        SELECT 
+        SELECT
             sp.id as plan_id,
             sp.submission_date as created_at,
             s.id,
@@ -144,20 +157,79 @@ function getRecentPlans() {
     $stmt->bind_param("i", $professor_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     $plans = [];
     while ($row = $result->fetch_assoc()) {
         $plans[] = $row;
     }
-    
+
     echo json_encode(['success' => true, 'plans' => $plans]);
 }
 
-function getAttentionStudents() {
+function getRecentAdvisingForms() {
     global $conn, $professor_id;
     
+    try {
+        $stmt = $conn->prepare("
+            SELECT 
+                aaf.id as form_id,
+                aaf.student_id,
+                s.id_number,
+                CONCAT(s.first_name, ' ', s.last_name) as student_name,
+                s.program,
+                aaf.form_data,
+                aaf.status,
+                aaf.submitted_at
+            FROM academic_advising_forms aaf
+            JOIN students s ON s.id = aaf.student_id
+            WHERE s.advisor_id = ?
+            ORDER BY aaf.submitted_at DESC
+            LIMIT 10
+        ");
+        
+        $stmt->bind_param("i", $professor_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $forms = [];
+        while ($row = $result->fetch_assoc()) {
+            // Parse JSON form data
+            $formData = json_decode($row['form_data'], true);
+            
+            $form = [
+                'form_id' => $row['form_id'],
+                'student_id' => $row['student_id'],
+                'id_number' => $row['id_number'],
+                'student_name' => $row['student_name'],
+                'program' => $row['program'],
+                'academic_year' => $formData['academic_year'] ?? 'N/A',
+                'term' => $formData['term'] ?? 'N/A',
+                'status' => $row['status'],
+                'submitted_at' => $row['submitted_at']
+            ];
+            
+            $forms[] = $form;
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'forms' => $forms
+        ]);
+        
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error loading forms: ' . $e->getMessage()
+        ]);
+    }
+}
+
+
+function getAttentionStudents() {
+    global $conn, $professor_id;
+
     $stmt = $conn->prepare("
-        SELECT 
+        SELECT
             s.id,
             s.id_number,
             s.program,
@@ -165,7 +237,7 @@ function getAttentionStudents() {
             s.advising_cleared,
             CONCAT(s.first_name, ' ', s.last_name) as full_name
         FROM students s
-        WHERE s.advisor_id = ? 
+        WHERE s.advisor_id = ?
         AND (s.accumulated_failed_units >= 15 OR s.advising_cleared = 0)
         ORDER BY s.accumulated_failed_units DESC
         LIMIT 10
@@ -173,23 +245,23 @@ function getAttentionStudents() {
     $stmt->bind_param("i", $professor_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     $students = [];
     while ($row = $result->fetch_assoc()) {
         $students[] = $row;
     }
-    
+
     echo json_encode(['success' => true, 'students' => $students]);
 }
 
 function getMyAdvisees() {
     global $conn, $professor_id;
-    
+
     $search = $_GET['search'] ?? '';
     $program = $_GET['program'] ?? '';
-    
+
     $query = "
-        SELECT 
+        SELECT
             s.id,
             s.id_number,
             s.program,
@@ -201,10 +273,10 @@ function getMyAdvisees() {
         FROM students s
         WHERE s.advisor_id = ?
     ";
-    
+
     $params = [$professor_id];
     $types = "i";
-    
+
     if ($search) {
         $query .= " AND (s.id_number LIKE ? OR s.first_name LIKE ? OR s.last_name LIKE ? OR s.email LIKE ?)";
         $searchParam = "%$search%";
@@ -214,46 +286,46 @@ function getMyAdvisees() {
         $params[] = $searchParam;
         $types .= "ssss";
     }
-    
+
     if ($program) {
         $query .= " AND s.program = ?";
         $params[] = $program;
         $types .= "s";
     }
-    
+
     $query .= " ORDER BY s.last_name, s.first_name";
-    
+
     $stmt = $conn->prepare($query);
     $stmt->bind_param($types, ...$params);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     $students = [];
     while ($row = $result->fetch_assoc()) {
         $students[] = $row;
     }
-    
+
     echo json_encode(['success' => true, 'students' => $students]);
 }
 
 function getStudentDetails() {
     global $conn, $professor_id;
-    
+
     $student_id = $_GET['student_id'];
-    
+
     $stmt = $conn->prepare("SELECT * FROM students WHERE id = ? AND advisor_id = ?");
     $stmt->bind_param("ii", $student_id, $professor_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     if ($row = $result->fetch_assoc()) {
         $stmt = $conn->prepare("SELECT COUNT(*) as plan_count FROM study_plans WHERE student_id = ?");
         $stmt->bind_param("i", $student_id);
         $stmt->execute();
         $plan_count = $stmt->get_result()->fetch_assoc()['plan_count'];
-        
+
         $row['plan_count'] = $plan_count;
-        
+
         echo json_encode(['success' => true, 'student' => $row]);
     } else {
         echo json_encode(['success' => false, 'message' => 'Student not found']);
@@ -262,12 +334,12 @@ function getStudentDetails() {
 
 function getStudyPlans() {
     global $conn, $professor_id;
-    
+
     $status = $_GET['status'] ?? 'all';
     $student_id = $_GET['student_id'] ?? null;
-    
+
     $query = "
-        SELECT 
+        SELECT
             sp.id,
             sp.student_id,
             sp.academic_year,
@@ -281,38 +353,38 @@ function getStudyPlans() {
         JOIN students s ON s.id = sp.student_id
         WHERE s.advisor_id = ?
     ";
-    
+
     $params = [$professor_id];
     $types = "i";
-    
+
     if ($student_id) {
         $query .= " AND sp.student_id = ?";
         $params[] = $student_id;
         $types .= "i";
     }
-    
+
     $query .= " ORDER BY sp.submission_date DESC";
-    
+
     $stmt = $conn->prepare($query);
     $stmt->bind_param($types, ...$params);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     $plans = [];
     while ($row = $result->fetch_assoc()) {
         $plans[] = $row;
     }
-    
+
     echo json_encode(['success' => true, 'plans' => $plans]);
 }
 
 function getStudyPlanDetails() {
     global $conn, $professor_id;
-    
+
     $plan_id = $_GET['plan_id'];
-    
+
     $stmt = $conn->prepare("
-        SELECT 
+        SELECT
             sp.*,
             s.id_number,
             s.program,
@@ -325,20 +397,20 @@ function getStudyPlanDetails() {
     $stmt->bind_param("ii", $plan_id, $professor_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     if ($plan = $result->fetch_assoc()) {
         $stmt = $conn->prepare("SELECT * FROM planned_subjects WHERE study_plan_id = ?");
         $stmt->bind_param("i", $plan_id);
         $stmt->execute();
         $subjects_result = $stmt->get_result();
-        
+
         $subjects = [];
         while ($row = $subjects_result->fetch_assoc()) {
             $subjects[] = $row;
         }
-        
+
         $plan['subjects'] = $subjects;
-        
+
         echo json_encode(['success' => true, 'plan' => $plan]);
     } else {
         echo json_encode(['success' => false, 'message' => 'Study plan not found']);
@@ -347,129 +419,129 @@ function getStudyPlanDetails() {
 
 function getStudentBooklet() {
     global $conn, $professor_id;
-    
+
     $student_id = $_GET['student_id'];
-    
+
     $stmt = $conn->prepare("SELECT id FROM students WHERE id = ? AND advisor_id = ?");
     $stmt->bind_param("ii", $student_id, $professor_id);
     $stmt->execute();
-    
+
     if ($stmt->get_result()->num_rows === 0) {
         echo json_encode(['success' => false, 'message' => 'Unauthorized']);
         return;
     }
-    
+
     $stmt = $conn->prepare("SELECT * FROM student_advising_booklet WHERE student_id = ? ORDER BY academic_year, term, course_code");
     $stmt->bind_param("i", $student_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     $records = [];
     while ($row = $result->fetch_assoc()) {
         $records[] = $row;
     }
-    
+
     echo json_encode(['success' => true, 'records' => $records]);
 }
 
 function getStudentGPA() {
     global $conn, $professor_id;
-    
+
     $student_id = $_GET['student_id'];
-    
+
     $stmt = $conn->prepare("SELECT id FROM students WHERE id = ? AND advisor_id = ?");
     $stmt->bind_param("ii", $student_id, $professor_id);
     $stmt->execute();
-    
+
     if ($stmt->get_result()->num_rows === 0) {
         echo json_encode(['success' => false, 'message' => 'Unauthorized']);
         return;
     }
-    
+
     $stmt = $conn->prepare("SELECT * FROM term_gpa_summary WHERE student_id = ? ORDER BY academic_year, term");
     $stmt->bind_param("i", $student_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     $terms = [];
     while ($row = $result->fetch_assoc()) {
         $terms[] = $row;
     }
-    
+
     echo json_encode(['success' => true, 'terms' => $terms]);
 }
 
 function getStudentStudyPlans() {
     global $conn, $professor_id;
-    
+
     $student_id = $_GET['student_id'];
-    
+
     $stmt = $conn->prepare("SELECT id FROM students WHERE id = ? AND advisor_id = ?");
     $stmt->bind_param("ii", $student_id, $professor_id);
     $stmt->execute();
-    
+
     if ($stmt->get_result()->num_rows === 0) {
         echo json_encode(['success' => false, 'message' => 'Unauthorized']);
         return;
     }
-    
+
     $stmt = $conn->prepare("SELECT * FROM study_plans WHERE student_id = ? ORDER BY submission_date DESC");
     $stmt->bind_param("i", $student_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     $plans = [];
     while ($row = $result->fetch_assoc()) {
         $plans[] = $row;
     }
-    
+
     echo json_encode(['success' => true, 'plans' => $plans]);
 }
 
 function getStudentConcerns() {
     global $conn, $professor_id;
-    
+
     $student_id = $_GET['student_id'];
-    
+
     $stmt = $conn->prepare("SELECT id FROM students WHERE id = ? AND advisor_id = ?");
     $stmt->bind_param("ii", $student_id, $professor_id);
     $stmt->execute();
-    
+
     if ($stmt->get_result()->num_rows === 0) {
         echo json_encode(['success' => false, 'message' => 'Unauthorized']);
         return;
     }
-    
+
     $stmt = $conn->prepare("SELECT * FROM student_concerns WHERE student_id = ? ORDER BY submission_date DESC");
     $stmt->bind_param("i", $student_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     $concerns = [];
     while ($row = $result->fetch_assoc()) {
         $concerns[] = $row;
     }
-    
+
     echo json_encode(['success' => true, 'concerns' => $concerns]);
 }
 
 function clearStudent() {
     global $conn, $professor_id;
-    
+
     $student_id = $_POST['student_id'];
-    
+
     $stmt = $conn->prepare("SELECT id FROM students WHERE id = ? AND advisor_id = ?");
     $stmt->bind_param("ii", $student_id, $professor_id);
     $stmt->execute();
-    
+
     if ($stmt->get_result()->num_rows === 0) {
         echo json_encode(['success' => false, 'message' => 'Unauthorized']);
         return;
     }
-    
+
     $stmt = $conn->prepare("UPDATE students SET advising_cleared = 1 WHERE id = ?");
     $stmt->bind_param("i", $student_id);
-    
+
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'message' => 'Student cleared']);
     } else {
@@ -479,21 +551,21 @@ function clearStudent() {
 
 function unclearStudent() {
     global $conn, $professor_id;
-    
+
     $student_id = $_POST['student_id'];
-    
+
     $stmt = $conn->prepare("SELECT id FROM students WHERE id = ? AND advisor_id = ?");
     $stmt->bind_param("ii", $student_id, $professor_id);
     $stmt->execute();
-    
+
     if ($stmt->get_result()->num_rows === 0) {
         echo json_encode(['success' => false, 'message' => 'Unauthorized']);
         return;
     }
-    
+
     $stmt = $conn->prepare("UPDATE students SET advising_cleared = 0 WHERE id = ?");
     $stmt->bind_param("i", $student_id);
-    
+
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'message' => 'Clearance revoked']);
     } else {
@@ -503,10 +575,10 @@ function unclearStudent() {
 
 function approveStudyPlan() {
     global $conn, $professor_id;
-    
+
     $plan_id = $_POST['plan_id'];
     $feedback = $_POST['feedback'] ?? '';
-    
+
     // Verify ownership
     $stmt = $conn->prepare("
         SELECT sp.id FROM study_plans sp
@@ -515,16 +587,16 @@ function approveStudyPlan() {
     ");
     $stmt->bind_param("ii", $plan_id, $professor_id);
     $stmt->execute();
-    
+
     if ($stmt->get_result()->num_rows === 0) {
         echo json_encode(['success' => false, 'message' => 'Unauthorized']);
         return;
     }
-    
+
     // Update study plan
     $stmt = $conn->prepare("UPDATE study_plans SET cleared = 1, adviser_feedback = ? WHERE id = ?");
     $stmt->bind_param("si", $feedback, $plan_id);
-    
+
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'message' => 'Study plan approved']);
     } else {
@@ -534,15 +606,15 @@ function approveStudyPlan() {
 
 function rejectStudyPlan() {
     global $conn, $professor_id;
-    
+
     $plan_id = $_POST['plan_id'];
     $feedback = $_POST['feedback'] ?? '';
-    
+
     if (empty($feedback)) {
         echo json_encode(['success' => false, 'message' => 'Feedback is required when rejecting']);
         return;
     }
-    
+
     // Verify ownership
     $stmt = $conn->prepare("
         SELECT sp.id FROM study_plans sp
@@ -551,16 +623,16 @@ function rejectStudyPlan() {
     ");
     $stmt->bind_param("ii", $plan_id, $professor_id);
     $stmt->execute();
-    
+
     if ($stmt->get_result()->num_rows === 0) {
         echo json_encode(['success' => false, 'message' => 'Unauthorized']);
         return;
     }
-    
+
     // Update study plan - mark as not cleared and add feedback
     $stmt = $conn->prepare("UPDATE study_plans SET cleared = 0, adviser_feedback = ? WHERE id = ?");
     $stmt->bind_param("si", $feedback, $plan_id);
-    
+
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'message' => 'Study plan rejected']);
     } else {
@@ -570,10 +642,10 @@ function rejectStudyPlan() {
 
 function addFeedback() {
     global $conn, $professor_id;
-    
+
     $plan_id = $_POST['plan_id'];
     $feedback = $_POST['feedback'] ?? '';
-    
+
     // Verify ownership
     $stmt = $conn->prepare("
         SELECT sp.id FROM study_plans sp
@@ -582,15 +654,15 @@ function addFeedback() {
     ");
     $stmt->bind_param("ii", $plan_id, $professor_id);
     $stmt->execute();
-    
+
     if ($stmt->get_result()->num_rows === 0) {
         echo json_encode(['success' => false, 'message' => 'Unauthorized']);
         return;
     }
-    
+
     $stmt = $conn->prepare("UPDATE study_plans SET adviser_feedback = ? WHERE id = ?");
     $stmt->bind_param("si", $feedback, $plan_id);
-    
+
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'message' => 'Feedback added']);
     } else {
@@ -600,10 +672,10 @@ function addFeedback() {
 
 function requestScreenshotReupload() {
     global $conn, $professor_id;
-    
+
     $plan_id = $_POST['plan_id'];
     $reason = $_POST['reason'] ?? '';
-    
+
     // Verify ownership
     $stmt = $conn->prepare("
         SELECT sp.id FROM study_plans sp
@@ -612,15 +684,15 @@ function requestScreenshotReupload() {
     ");
     $stmt->bind_param("ii", $plan_id, $professor_id);
     $stmt->execute();
-    
+
     if ($stmt->get_result()->num_rows === 0) {
         echo json_encode(['success' => false, 'message' => 'Unauthorized']);
         return;
     }
-    
+
     $stmt = $conn->prepare("UPDATE study_plans SET screenshot_reupload_requested = 1, reupload_reason = ? WHERE id = ?");
     $stmt->bind_param("si", $reason, $plan_id);
-    
+
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'message' => 'Reupload requested']);
     } else {
@@ -632,22 +704,22 @@ function requestScreenshotReupload() {
 
 function setAdvisingDeadline() {
     global $conn, $professor_id;
-    
+
     $term = $_POST['term'] ?? '';
     $deadline_date = $_POST['deadline_date'] ?? '';
-    
+
     if (empty($term) || empty($deadline_date)) {
         echo json_encode(['success' => false, 'message' => 'Term and deadline date are required']);
         return;
     }
-    
+
     try {
         // Check if deadline exists for this term
         $stmt = $conn->prepare("SELECT id FROM advising_deadlines WHERE term = ? AND professor_id = ?");
         $stmt->bind_param("si", $term, $professor_id);
         $stmt->execute();
         $result = $stmt->get_result();
-        
+
         if ($result->num_rows > 0) {
             // Update existing
             $stmt = $conn->prepare("UPDATE advising_deadlines SET deadline_date = ?, updated_at = NOW() WHERE term = ? AND professor_id = ?");
@@ -659,9 +731,9 @@ function setAdvisingDeadline() {
             $stmt->bind_param("iss", $professor_id, $term, $deadline_date);
             $stmt->execute();
         }
-        
+
         echo json_encode([
-            'success' => true, 
+            'success' => true,
             'message' => 'Deadline set successfully',
             'term' => $term,
             'deadline' => date('F d, Y', strtotime($deadline_date))
@@ -673,19 +745,19 @@ function setAdvisingDeadline() {
 
 function getCurrentDeadline() {
     global $conn, $professor_id;
-    
+
     try {
         $stmt = $conn->prepare("
-            SELECT term, deadline_date 
-            FROM advising_deadlines 
-            WHERE professor_id = ? 
-            ORDER BY created_at DESC 
+            SELECT term, deadline_date
+            FROM advising_deadlines
+            WHERE professor_id = ?
+            ORDER BY created_at DESC
             LIMIT 1
         ");
         $stmt->bind_param("i", $professor_id);
         $stmt->execute();
         $result = $stmt->get_result();
-        
+
         if ($row = $result->fetch_assoc()) {
             echo json_encode([
                 'success' => true,
@@ -704,13 +776,13 @@ function getCurrentDeadline() {
 
 function getStudentsForAdvising() {
     global $conn, $professor_id;
-    
+
     $filter = $_GET['filter'] ?? 'all';
     $search = $_GET['search'] ?? '';
-    
+
     try {
         $sql = "
-            SELECT 
+            SELECT
                 s.id,
                 s.id_number,
                 CONCAT(s.first_name, ' ', s.last_name) as name,
@@ -730,10 +802,10 @@ function getStudentsForAdvising() {
             LEFT JOIN study_plans sp ON sp.id = latest.latest_plan
             WHERE s.advisor_id = ?
         ";
-        
+
         $params = [$professor_id];
         $types = "i";
-        
+
         // Add filter conditions
         if ($filter === 'completed') {
             $sql .= " AND s.advising_cleared = 1";
@@ -742,7 +814,7 @@ function getStudentsForAdvising() {
         } elseif ($filter === 'not-submitted') {
             $sql .= " AND sp.id IS NULL";
         }
-        
+
         // Add search conditions
         if (!empty($search)) {
             $sql .= " AND (s.id_number LIKE ? OR CONCAT(s.first_name, ' ', s.last_name) LIKE ?)";
@@ -751,22 +823,22 @@ function getStudentsForAdvising() {
             $params[] = $searchParam;
             $types .= "ss";
         }
-        
+
         $sql .= " ORDER BY s.id_number";
-        
+
         $stmt = $conn->prepare($sql);
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $result = $stmt->get_result();
-        
+
         $students = [];
         while ($row = $result->fetch_assoc()) {
             $students[] = $row;
         }
-        
+
         // Calculate counts
         $stmt = $conn->prepare("
-            SELECT 
+            SELECT
                 COUNT(*) as total,
                 SUM(CASE WHEN s.advising_cleared = 1 THEN 1 ELSE 0 END) as completed,
                 SUM(CASE WHEN sp.id IS NOT NULL AND sp.cleared = 0 THEN 1 ELSE 0 END) as pending,
@@ -784,7 +856,7 @@ function getStudentsForAdvising() {
         $stmt->bind_param("i", $professor_id);
         $stmt->execute();
         $counts = $stmt->get_result()->fetch_assoc();
-        
+
         echo json_encode([
             'success' => true,
             'students' => $students,
@@ -797,13 +869,13 @@ function getStudentsForAdvising() {
 
 function getSubmissionDetails() {
     global $conn, $professor_id;
-    
+
     $student_id = $_GET['student_id'] ?? 0;
-    
+
     try {
         // Get latest study plan
         $stmt = $conn->prepare("
-            SELECT 
+            SELECT
                 sp.*,
                 s.id_number,
                 CONCAT(s.first_name, ' ', s.last_name) as student_name,
@@ -818,15 +890,15 @@ function getSubmissionDetails() {
         $stmt->execute();
         $result = $stmt->get_result();
         $plan = $result->fetch_assoc();
-        
+
         if (!$plan) {
             echo json_encode(['success' => false, 'message' => 'No submission found']);
             return;
         }
-        
+
         // Get current subjects
         $stmt = $conn->prepare("
-            SELECT cs.*, 
+            SELECT cs.*,
                 GROUP_CONCAT(CONCAT(csp.prerequisite_code, ' (', csp.prerequisite_type, ')') SEPARATOR ', ') as prerequisites
             FROM current_subjects cs
             LEFT JOIN current_subject_prerequisites csp ON cs.id = csp.current_subject_id
@@ -836,15 +908,15 @@ function getSubmissionDetails() {
         $stmt->bind_param("i", $plan['id']);
         $stmt->execute();
         $result = $stmt->get_result();
-        
+
         $current_subjects = [];
         while ($row = $result->fetch_assoc()) {
             $current_subjects[] = $row;
         }
-        
+
         // Get planned subjects
         $stmt = $conn->prepare("
-            SELECT ps.*, 
+            SELECT ps.*,
                 GROUP_CONCAT(CONCAT(psp.prerequisite_code, ' (', psp.prerequisite_type, ')') SEPARATOR ', ') as prerequisites
             FROM planned_subjects ps
             LEFT JOIN planned_subject_prerequisites psp ON ps.id = psp.planned_subject_id
@@ -854,12 +926,12 @@ function getSubmissionDetails() {
         $stmt->bind_param("i", $plan['id']);
         $stmt->execute();
         $result = $stmt->get_result();
-        
+
         $planned_subjects = [];
         while ($row = $result->fetch_assoc()) {
             $planned_subjects[] = $row;
         }
-        
+
         echo json_encode([
             'success' => true,
             'plan' => $plan,

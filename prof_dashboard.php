@@ -4,7 +4,7 @@ requireProfessor();
 
 require_once 'config.php';
 
-// Get professor inf
+// Get professor info
 $professor_id = $_SESSION['user_id'];
 $stmt = $conn->prepare("SELECT * FROM professors WHERE id = ?");
 $stmt->bind_param("i", $professor_id);
@@ -110,6 +110,11 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
             border-radius: 5px;
             text-decoration: none;
             font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
         }
 
         .stats-grid {
@@ -219,6 +224,16 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
             color: #155724;
         }
 
+        .badge.rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge.revision_requested {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
         .badge.warning {
             background: #fff3cd;
             color: #856404;
@@ -244,6 +259,7 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
             font-size: 13px;
             text-decoration: none;
             display: inline-block;
+            transition: background 0.3s;
         }
 
         .btn-view:hover {
@@ -261,6 +277,23 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
             padding: 40px;
             color: #999;
             font-style: italic;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                height: auto;
+            }
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+                padding: 15px;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -300,8 +333,8 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
                 </div>
                 <div class="stat-card warning">
                     <h3>Pending Review</h3>
-                    <div class="value" id="pendingPlans">0</div>
-                    <div class="label">Study plans awaiting</div>
+                    <div class="value" id="pendingForms">0</div>
+                    <div class="label">Advising forms awaiting</div>
                 </div>
                 <div class="stat-card success">
                     <h3>Cleared</h3>
@@ -316,7 +349,7 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
             </div>
 
             <div class="content-card">
-                <h2>Recent Study Plan Submissions</h2>
+                <h2>Recent Advising Form Submissions</h2>
                 <div class="table-container">
                     <table class="data-table">
                         <thead>
@@ -324,13 +357,15 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
                                 <th>Student ID</th>
                                 <th>Name</th>
                                 <th>Program</th>
+                                <th>Academic Year</th>
+                                <th>Term</th>
                                 <th>Submitted</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="recentPlansTable">
-                            <tr><td colspan="6" class="loading">Loading...</td></tr>
+                        <tbody id="recentFormsTable">
+                            <tr><td colspan="8" class="loading">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -362,59 +397,66 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             loadDashboardStats();
-            loadRecentPlans();
+            loadRecentForms();
             loadAttentionStudents();
         });
 
         function loadDashboardStats() {
-            fetch('prof_api.php?action=getDashboardStats')
+            fetch('prof_api.php?action=get_dashboard_stats')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        document.getElementById('totalAdvisees').textContent = data.stats.totaladvisees;
-                        document.getElementById('pendingPlans').textContent = data.stats.pendingplans;
-                        document.getElementById('clearedStudents').textContent = data.stats.clearedstudents;
-                        document.getElementById('atRiskStudents').textContent = data.stats.atriskstudents;
+                        document.getElementById('totalAdvisees').textContent = data.stats.total_advisees;
+                        document.getElementById('pendingForms').textContent = data.stats.pending_forms;
+                        document.getElementById('clearedStudents').textContent = data.stats.cleared_students;
+                        document.getElementById('atRiskStudents').textContent = data.stats.at_risk_students;
                     }
                 })
                 .catch(error => console.error('Error:', error));
         }
 
-        function loadRecentPlans() {
-            fetch('prof_api.php?action=getRecentPlans')
+        function loadRecentForms() {
+            fetch('prof_api.php?action=get_recent_advising_forms')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        renderRecentPlans(data.plans);
+                        renderRecentForms(data.forms);
                     }
                 })
                 .catch(error => console.error('Error:', error));
         }
 
-        function renderRecentPlans(plans) {
-            const tbody = document.getElementById('recentPlansTable');
+        function renderRecentForms(forms) {
+            const tbody = document.getElementById('recentFormsTable');
             
-            if (plans.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="no-data">No recent submissions</td></tr>';
+            if (forms.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="no-data">No recent submissions</td></tr>';
                 return;
             }
 
             let html = '';
-            plans.forEach(plan => {
-                const statusBadge = plan.status === 'approved' 
-                    ? '<span class="badge approved">Approved</span>' 
-                    : plan.status === 'rejected' 
-                        ? '<span class="badge danger">Rejected</span>' 
-                        : '<span class="badge pending">Pending</span>';
+            forms.forEach(form => {
+                let statusBadge = '';
+                if (form.status === 'approved') {
+                    statusBadge = '<span class="badge approved">Approved</span>';
+                } else if (form.status === 'rejected') {
+                    statusBadge = '<span class="badge rejected">Rejected</span>';
+                } else if (form.status === 'revision_requested') {
+                    statusBadge = '<span class="badge revision_requested">Revision Requested</span>';
+                } else {
+                    statusBadge = '<span class="badge pending">Pending</span>';
+                }
                 
                 html += `
                     <tr>
-                        <td>${plan.idnumber}</td>
-                        <td>${plan.studentname}</td>
-                        <td>${plan.program.replace('BS', '')}</td>
-                        <td>${formatDate(plan.createdat)}</td>
+                        <td><strong>${form.id_number}</strong></td>
+                        <td>${form.student_name}</td>
+                        <td>${form.program.replace('BS ', '')}</td>
+                        <td>${form.academic_year || 'N/A'}</td>
+                        <td>${form.term || 'N/A'}</td>
+                        <td>${formatDate(form.submitted_at)}</td>
                         <td>${statusBadge}</td>
-                        <td><a href="prof_study_plan_view.php?id=${plan.planid}" class="btn-view">Review</a></td>
+                        <td><a href="prof_advising_form_view.php?id=${form.form_id}" class="btn-view">Review</a></td>
                     </tr>
                 `;
             });
@@ -422,7 +464,7 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
         }
 
         function loadAttentionStudents() {
-            fetch('prof_api.php?action=getAttentionStudents')
+            fetch('prof_api.php?action=get_attention_students')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -443,22 +485,22 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
             let html = '';
             students.forEach(student => {
                 let failedBadge = '';
-                if (student.accumulatedfailedunits >= 25) {
-                    failedBadge = '<span class="badge danger">CRITICAL</span>';
-                } else if (student.accumulatedfailedunits >= 15) {
-                    failedBadge = '<span class="badge warning">AT RISK</span>';
+                if (student.accumulated_failed_units >= 25) {
+                    failedBadge = ' <span class="badge danger">CRITICAL</span>';
+                } else if (student.accumulated_failed_units >= 15) {
+                    failedBadge = ' <span class="badge warning">AT RISK</span>';
                 }
 
-                const statusBadge = student.advisingcleared 
+                const statusBadge = student.advising_cleared 
                     ? '<span class="badge success">Cleared</span>' 
                     : '<span class="badge pending">Pending</span>';
                 
                 html += `
                     <tr>
-                        <td>${student.idnumber}</td>
-                        <td>${student.fullname}</td>
-                        <td>${student.program.replace('BS', '')}</td>
-                        <td>${student.accumulatedfailedunits} ${failedBadge}</td>
+                        <td><strong>${student.id_number}</strong></td>
+                        <td>${student.full_name}</td>
+                        <td>${student.program.replace('BS ', '')}</td>
+                        <td>${student.accumulated_failed_units}${failedBadge}</td>
                         <td>${statusBadge}</td>
                         <td><a href="prof_student_view.php?id=${student.id}" class="btn-view">View</a></td>
                     </tr>
@@ -472,7 +514,10 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
             return date.toLocaleString('en-US', { 
                 month: 'short', 
                 day: 'numeric', 
-                year: 'numeric' 
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
             });
         }
     </script>
