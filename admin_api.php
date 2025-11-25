@@ -8,7 +8,12 @@ require_once __DIR__ . '/vendor/autoload.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
+// Clean any previous output
+while (ob_get_level()) {
+    ob_end_clean();
+}
 ob_start();
+
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -16,45 +21,45 @@ ini_set('log_errors', 1);
 header('Content-Type: application/json');
 
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
-    ob_clean();
+    ob_end_clean();
     echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
     exit();
 }
 
-ob_clean();
+ob_end_clean();
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
 switch ($action) {
     // ... (Keep existing bulk upload cases) ...
-    case 'bulk_upload_students': bulkUploadStudents(); break;
-    case 'bulk_upload_professors': bulkUploadProfessors(); break;
-    case 'bulk_upload_courses': bulkUploadCourses(); break;
+    case 'bulk_upload_students': bulkUploadStudents(); exit;
+    case 'bulk_upload_professors': bulkUploadProfessors(); exit;
+    case 'bulk_upload_courses': bulkUploadCourses(); exit;
     
     // Updated Dashboard Stats
-    case 'get_dashboard_stats': getDashboardStats(); break;
+    case 'get_dashboard_stats': getDashboardStats(); exit;
     
     // ... (Keep existing list/edit/delete cases) ...
-    case 'get_professors_list': getProfessorsList(); break;
-    case 'get_students_list': getStudentsList(); break;
-    case 'get_student_details': getStudentDetails(); break;
-    case 'get_professor_details': getProfessorDetails(); break;
-    case 'get_unassigned_students': getUnassignedStudents(); break;
-    case 'assign_student_to_adviser': assignStudentToAdviser(); break;
-    case 'get_adviser_students': getAdviserStudents(); break;
-    case 'remove_student_from_adviser': removeStudentFromAdviser(); break;
-    case 'add_single_student': addSingleStudent(); break;
-    case 'edit_student': editStudent(); break;
-    case 'add_single_professor': addSingleProfessor(); break;
-    case 'edit_professor': editProfessor(); break;
-    case 'delete_student': deleteStudent(); break;
-    case 'delete_professor': deleteProfessor(); break;
-    case 'get_course_catalog': getCourseCatalog(); break;
-    case 'add_course': addCourse(); break;
-    case 'update_course': updateCourse(); break;
-    case 'delete_course': deleteCourse(); break;
-    case 'get_user_password': getUserPassword(); break;
-    default: echo json_encode(['success' => false, 'message' => 'Invalid action']); break;
+    case 'get_professors_list': getProfessorsList(); exit;
+    case 'get_students_list': getStudentsList(); exit;
+    case 'get_student_details': getStudentDetails(); exit;
+    case 'get_professor_details': getProfessorDetails(); exit;
+    case 'get_unassigned_students': getUnassignedStudents(); exit;
+    case 'assign_student_to_adviser': assignStudentToAdviser(); exit;
+    case 'get_adviser_students': getAdviserStudents(); exit;
+    case 'remove_student_from_adviser': removeStudentFromAdviser(); exit;
+    case 'add_single_student': addSingleStudent(); exit;
+    case 'edit_student': editStudent(); exit;
+    case 'add_single_professor': addSingleProfessor(); exit;
+    case 'edit_professor': editProfessor(); exit;
+    case 'delete_student': deleteStudent(); exit;
+    case 'delete_professor': deleteProfessor(); exit;
+    case 'get_course_catalog': getCourseCatalog(); exit;
+    case 'add_course': addCourse(); exit;
+    case 'update_course': updateCourse(); exit;
+    case 'delete_course': deleteCourse(); exit;
+    case 'get_user_password': getUserPassword(); exit;
+    default: echo json_encode(['success' => false, 'message' => 'Invalid action']); exit;
 }
 
 // ============= UPDATED DASHBOARD STATS =============
@@ -407,10 +412,28 @@ function deleteProfessor() {
         echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
     }
 }
-function getCourseCatalog() { global $conn; $res=$conn->query("SELECT * FROM course_catalog"); $data=[]; while($r=$res->fetch_assoc())$data[]=$r; echo json_encode(['success'=>true,'courses'=>$data]); }
-function addCourse() { echo json_encode(['success'=>false,'message'=>'Not implemented in snippet']); }
-function updateCourse() { echo json_encode(['success'=>false,'message'=>'Not implemented in snippet']); }
-function deleteCourse() { echo json_encode(['success'=>false,'message'=>'Not implemented in snippet']); }
-function getUserPassword() { echo json_encode(['success'=>false,'message'=>'Not implemented in snippet']); }
+function getCourseCatalog() { 
+    global $conn; 
+    $res = $conn->query("SELECT * FROM course_catalog"); 
+    $data = []; 
+    while($r = $res->fetch_assoc()) {
+        $data[] = $r;
+    }
+    echo json_encode(['success' => true, 'courses' => $data]); 
+}
 
-?>
+function addCourse() { 
+    echo json_encode(['success' => false, 'message' => 'Not implemented in snippet']); 
+}
+
+function updateCourse() { 
+    echo json_encode(['success' => false, 'message' => 'Not implemented in snippet']); 
+}
+
+function deleteCourse() { 
+    echo json_encode(['success' => false, 'message' => 'Not implemented in snippet']); 
+}
+
+function getUserPassword() { 
+    echo json_encode(['success' => false, 'message' => 'Not implemented in snippet']); 
+}
