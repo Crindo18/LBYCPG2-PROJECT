@@ -287,10 +287,6 @@ $professor_name = $stmt->get_result()->fetch_assoc()['full_name'];
                             <div class="info-value">${form.program}</div>
                         </div>
                         <div class="info-item">
-                            <div class="info-label">Year Level</div>
-                            <div class="info-value">${form.year_level}</div>
-                        </div>
-                        <div class="info-item">
                             <div class="info-label">Failed Units (Accumulated)</div>
                             <div class="info-value">${form.accumulated_failed_units} units${failedUnitsBadge}</div>
                         </div>
