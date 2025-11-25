@@ -184,7 +184,6 @@ $professor_name = $stmt->get_result()->fetch_assoc()['name'];
                 <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
                 <button class="tab-btn" onclick="switchTab('booklet')">Academic Booklet</button>
                 <button class="tab-btn" onclick="switchTab('grades')">Term Grades</button>
-                <button class="tab-btn" onclick="switchTab('studyplans')">Study Plans</button>
                 <button class="tab-btn" onclick="switchTab('concerns')">Concerns</button>
             </div>
             
