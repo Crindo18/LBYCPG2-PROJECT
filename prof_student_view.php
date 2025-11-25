@@ -124,10 +124,7 @@ $professor_name = $stmt->get_result()->fetch_assoc()['name'];
             <nav class="sidebar-menu">
                 <a href="prof_dashboard.php" class="menu-item">Dashboard</a>
                 <a href="prof_advisees.php" class="menu-item">My Advisees</a>
-<<<<<<< HEAD
                 <a href="prof_advising_forms.php" class="menu-item">Advising Forms</a>
-=======
->>>>>>> 2ab1522dbef8630d0dca67380e150f731f119ff3
                 <a href="prof_acadadvising.php" class="menu-item">Academic Advising</a>
                 <a href="prof_concerns.php" class="menu-item">Student Concerns</a>
                 <a href="prof_reports.php" class="menu-item">Reports</a>
