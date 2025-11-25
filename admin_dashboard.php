@@ -69,8 +69,8 @@ $admin_username = $_SESSION['username'];
                 <p>Academic Advising System</p>
             </div>
             <nav class="sidebar-menu">
-                <a href="admin_dashboard.php" class="menu-item">Dashboard</a>
-                <a href="admin_accounts.php" class="menu-item active">User Accounts</a>
+                <a href="admin_dashboard.php" class="menu-item active">Dashboard</a>
+                <a href="admin_accounts.php" class="menu-item">User Accounts</a>
                 <a href="admin_courses.php" class="menu-item">Course Catalog</a>
                 <a href="admin_advisingassignment.php" class="menu-item">Advising Assignments</a>
                 <a href="admin_reports.php" class="menu-item">System Reports</a>
