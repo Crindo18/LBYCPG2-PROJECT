@@ -17,50 +17,51 @@ $student_name = $stmt->get_result()->fetch_assoc()['name'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Submit Concern</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
-        .container { display: flex; min-height: 100vh; }
-        .sidebar { width: 260px; background: #1976D2; color: white; position: fixed; height: 100vh; overflow-y: auto; }
-        .sidebar-header { padding: 25px 20px; background: #1565C0; }
-        .sidebar-header h2 { font-size: 18px; margin-bottom: 5px; }
-        .sidebar-header p { font-size: 13px; opacity: 0.9; }
-        .sidebar-menu { padding: 20px 0; }
-        .menu-item { padding: 15px 25px; color: white; text-decoration: none; display: block; transition: all 0.3s; border-left: 3px solid transparent; }
-        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #90CAF9; }
-        .main-content { margin-left: 260px; flex: 1; padding: 30px; width: calc(100% - 260px); }
-        .top-bar { background: white; padding: 20px 30px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .top-bar h1 { font-size: 28px; color: #1976D2; }
-        .logout-btn { padding: 8px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; text-decoration: none; font-size: 14px; }
-        
-        .content-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        .content-card h3 { font-size: 20px; color: #1976D2; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
-        
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; }
-        .form-group textarea { min-height: 150px; resize: vertical; font-family: inherit; }
-        .form-group .help-text { font-size: 13px; color: #666; margin-top: 5px; }
-        
-        .btn { padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600; transition: all 0.3s; }
-        .btn-primary { background: #1976D2; color: white; }
-        .btn-primary:hover { background: #1565C0; }
-        .btn-secondary { background: #6c757d; color: white; }
-        .btn-secondary:hover { background: #545b62; }
-        
-        .alert { padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; }
-        .alert.success { background: #d4edda; border-left: 4px solid #28a745; color: #155724; }
-        .alert.danger { background: #f8d7da; border-left: 4px solid #dc3545; color: #721c24; }
-        .alert.info { background: #d1ecf1; border-left: 4px solid #17a2b8; color: #0c5460; }
-        
-        .concern-item { padding: 20px; background: #f8f9fa; border-left: 4px solid #1976D2; border-radius: 5px; margin-bottom: 15px; }
-        .concern-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px; }
-        .concern-term { font-weight: 600; color: #1976D2; }
-        .concern-date { font-size: 13px; color: #666; }
-        .concern-text { color: #333; line-height: 1.6; }
-        
-        .empty-state { text-align: center; padding: 60px 20px; color: #999; }
-        .loading { text-align: center; padding: 40px; color: #666; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+            .container { display: flex; min-height: 100vh; }
+            .sidebar { width: 260px; background: #00A36C; color: white; position: fixed; height: 100vh; overflow-y: auto; }
+            .sidebar-header { padding: 25px 20px; background: #008558; }
+            .sidebar-header h2 { font-size: 18px; margin-bottom: 5px; }
+            .sidebar-header p { font-size: 13px; opacity: 0.9; }
+            .sidebar-menu { padding: 20px 0; }
+            .menu-item { padding: 15px 25px; color: white; text-decoration: none; display: block; transition: all 0.3s; border-left: 3px solid transparent; }
+            .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #7FE5B8; }
+            .main-content { margin-left: 260px; flex: 1; padding: 30px; width: calc(100% - 260px); }
+            .top-bar { background: white; padding: 20px 30px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+            .top-bar h1 { font-size: 28px; color: #00A36C; }
+            .logout-btn { padding: 8px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; text-decoration: none; font-size: 14px; }
+            
+            .content-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 30px; }
+            .content-card h3 { font-size: 20px; color: #00A36C; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
+            
+            .form-group { margin-bottom: 20px; }
+            .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
+            .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; }
+            .form-group textarea { min-height: 150px; resize: vertical; font-family: inherit; }
+            .form-group .help-text { font-size: 13px; color: #666; margin-top: 5px; }
+            
+            .btn { padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600; transition: all 0.3s; }
+            .btn-primary { background: #00A36C; color: white; }
+            .btn-primary:hover { background: #008558; }
+            .btn-secondary { background: #6c757d; color: white; }
+            .btn-secondary:hover { background: #545b62; }
+            
+            .alert { padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; }
+            .alert.success { background: #d4edda; border-left: 4px solid #28a745; color: #155724; }
+            .alert.danger { background: #f8d7da; border-left: 4px solid #dc3545; color: #721c24; }
+            .alert.info { background: #d1ecf1; border-left: 4px solid #17a2b8; color: #0c5460; }
+            
+            .concern-item { padding: 20px; background: #f8f9fa; border-left: 4px solid #00A36C; border-radius: 5px; margin-bottom: 15px; }
+            .concern-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px; }
+            .concern-term { font-weight: 600; color: #00A36C; }
+            .concern-date { font-size: 13px; color: #666; }
+            .concern-text { color: #333; line-height: 1.6; }
+            
+            .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+            .loading { text-align: center; padding: 40px; color: #666; }
     </style>
+
 </head>
 <body>
     <div class="container">

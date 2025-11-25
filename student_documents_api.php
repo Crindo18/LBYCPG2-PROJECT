@@ -195,13 +195,13 @@ function generateBookletHTML($student, $records) {
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; }
             .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #333; padding-bottom: 20px; }
-            .header h1 { color: #1976D2; margin: 0; }
+            .header h1 { color: #00A36C; margin: 0; }
             .header h2 { color: #666; margin: 10px 0; font-size: 18px; }
             .student-info { background: #f5f5f5; padding: 20px; margin-bottom: 30px; border-radius: 5px; }
             .student-info p { margin: 8px 0; }
-            .student-info strong { color: #1976D2; }
+            .student-info strong { color: #00A36C; }
             table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-            th { background: #1976D2; color: white; padding: 12px; text-align: left; font-size: 14px; }
+            th { background: #00A36C; color: white; padding: 12px; text-align: left; font-size: 14px; }
             td { padding: 10px; border-bottom: 1px solid #ddd; font-size: 13px; }
             tr:hover { background: #f9f9f9; }
             .term-header { background: #e3f2fd; font-weight: bold; font-size: 15px; }
