@@ -182,10 +182,16 @@ function getDashboardStats() {
 function bulkUploadStudents() { echo json_encode(['success'=>false,'message'=>'Not implemented']); }
 function bulkUploadProfessors() { echo json_encode(['success'=>false,'message'=>'Not implemented']); }
 function bulkUploadCourses() { echo json_encode(['success'=>false,'message'=>'Not implemented']); }
-function getProfessorsList() { global $conn; $result = $conn->query("SELECT * FROM professors"); $data = []; while($r=$result->fetch_assoc())$data[]=$r; echo json_encode(['success'=>true,'professors'=>$data]); }
+function getProfessorsList() { 
+    global $conn; 
+    $result = $conn->query("SELECT p.*, CONCAT(p.first_name, ' ', p.last_name) as full_name, COUNT(s.id) as advisee_count FROM professors p LEFT JOIN students s ON s.advisor_id = p.id GROUP BY p.id ORDER BY p.id_number"); 
+    $data = []; 
+    while($r=$result->fetch_assoc())$data[]=$r; 
+    echo json_encode(['success'=>true,'professors'=>$data]); 
+}
 function getStudentsList() { 
     global $conn; 
-    $q = "SELECT s.*, CONCAT(p.first_name, ' ', p.last_name) as adviser_name FROM students s LEFT JOIN professors p ON p.id = s.advisor_id"; 
+    $q = "SELECT s.*, CONCAT(s.first_name, ' ', s.last_name) as full_name, CONCAT(p.first_name, ' ', p.last_name) as adviser_name FROM students s LEFT JOIN professors p ON p.id = s.advisor_id ORDER BY s.id_number"; 
     $res = $conn->query($q); 
     $data=[]; 
     while($r=$res->fetch_assoc())$data[]=$r; 
