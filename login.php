@@ -41,13 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $student = $student_result->fetch_assoc();
 
                 $_SESSION['name'] = $student['first_name'] . ' ' . $student['last_name'];
-                $_SESSION['must_change_password'] = $student['must_change_password'];
-
-                if ($student['must_change_password']) {
-                    header("Location: change_password.php");
-                } else {
-                    header("Location: student_dashboard.php");
-                }
+                header("Location: student_dashboard.php");
                 exit();
 
             } elseif ($login['user_type'] === 'professor') {
@@ -59,13 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $prof = $prof_result->fetch_assoc();
 
                 $_SESSION['name'] = $prof['first_name'] . ' ' . $prof['last_name'];
-                $_SESSION['must_change_password'] = $prof['must_change_password'];
-
-                if ($prof['must_change_password']) {
-                    header("Location: change_password.php");
-                } else {
-                    header("Location: prof_dashboard.php");
-                }
+                header("Location: prof_dashboard.php");
                 exit();
             }
         }
