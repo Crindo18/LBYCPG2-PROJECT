@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             } elseif ($login['user_type'] === 'student') {
                 // Load student profile
-                $s = $conn->prepare("SELECT first_name, last_name, must_change_password FROM students WHERE id = ?");
+                $s = $conn->prepare("SELECT first_name, last_name FROM students WHERE id = ?");
                 $s->bind_param("i", $login['id']);
                 $s->execute();
                 $student_result = $s->get_result();
@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             } elseif ($login['user_type'] === 'professor') {
                 // Load professor profile
-                $p = $conn->prepare("SELECT first_name, last_name, must_change_password FROM professors WHERE id = ?");
+                $p = $conn->prepare("SELECT first_name, last_name FROM professors WHERE id = ?");
                 $p->bind_param("i", $login['id']);
                 $p->execute();
                 $prof_result = $p->get_result();
