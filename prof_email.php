@@ -3,236 +3,16 @@ require_once 'auth_check.php';
 require_once 'config.php';
 
 if (!isAuthenticated() || $_SESSION['user_type'] !== 'professor') {
-    if (isset($_GET['action']) || isset($_POST['action'])) {
-        header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-        exit();
-    }
     header('Location: login.php');
     exit();
 }
 
 $professor_id = $_SESSION['user_id'];
-
-// Handle API requests
-if (isset($_GET['action']) || isset($_POST['action'])) {
-    ob_start();
-    error_reporting(0);
-    ini_set('display_errors', 0);
-    ob_clean();
-    header('Content-Type: application/json');
-    
-    $action = $_POST['action'] ?? $_GET['action'] ?? '';
-    
-    switch ($action) {
-    case 'get_advisees':
-        getAdvisees();
-        break;
-    case 'send_email':
-        sendEmail();
-        break;
-    case 'get_templates':
-        getTemplates();
-        break;
-    case 'get_template':
-        getTemplate();
-        break;
-    case 'save_template':
-        saveTemplate();
-        break;
-    case 'delete_template':
-        deleteTemplate();
-        break;
-    case 'get_sent_emails':
-        getSentEmails();
-        break;
-    case 'process_emails':
-        processEmails();
-        break;
-    default:
-        echo json_encode(['success' => false, 'message' => 'Invalid action']);
-    }
-    exit();
-}
-
-// API Functions
-function getAdvisees() {
-    global $conn, $professor_id;
-    $stmt = $conn->prepare("SELECT id, id_number, CONCAT(first_name, ' ', last_name) as name FROM students WHERE advisor_id = ? ORDER BY last_name, first_name");
-    $stmt->bind_param("i", $professor_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $students = [];
-    while ($row = $result->fetch_assoc()) {
-        $students[] = $row;
-    }
-    echo json_encode(['success' => true, 'students' => $students]);
-}
-
-function sendEmail() {
-    global $conn, $professor_id;
-    $recipients = json_decode($_POST['recipients'], true);
-    $subject = $_POST['subject'];
-    $message = $_POST['message'];
-    $send_immediately = $_POST['send_immediately'] === '1';
-    
-    $stmt = $conn->prepare("INSERT INTO email_queue (from_professor_id, to_student_id, subject, body, send_immediately) VALUES (?, ?, ?, ?, ?)");
-    $success_count = 0;
-    foreach ($recipients as $student_id) {
-        $stmt->bind_param("iissi", $professor_id, $student_id, $subject, $message, $send_immediately);
-        if ($stmt->execute()) $success_count++;
-    }
-    echo json_encode(['success' => true, 'message' => "Email queued for $success_count recipient(s)"]);
-}
-
-function getTemplates() {
-    global $conn, $professor_id;
-    $stmt = $conn->prepare("SELECT * FROM email_templates WHERE professor_id = ? ORDER BY created_at DESC");
-    $stmt->bind_param("i", $professor_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $templates = [];
-    while ($row = $result->fetch_assoc()) {
-        $templates[] = $row;
-    }
-    echo json_encode(['success' => true, 'templates' => $templates]);
-}
-
-function getTemplate() {
-    global $conn, $professor_id;
-    $id = $_GET['id'];
-    $stmt = $conn->prepare("SELECT * FROM email_templates WHERE id = ? AND professor_id = ?");
-    $stmt->bind_param("ii", $id, $professor_id);
-    $stmt->execute();
-    $template = $stmt->get_result()->fetch_assoc();
-    echo json_encode(['success' => true, 'template' => $template]);
-}
-
-function saveTemplate() {
-    global $conn, $professor_id;
-    $template_name = $_POST['template_name'];
-    $subject = $_POST['subject'];
-    $body = $_POST['body'];
-    $stmt = $conn->prepare("INSERT INTO email_templates (professor_id, template_name, subject, body) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("isss", $professor_id, $template_name, $subject, $body);
-    if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'message' => 'Template saved successfully']);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Failed to save template']);
-    }
-}
-
-function deleteTemplate() {
-    global $conn, $professor_id;
-    $id = $_POST['id'];
-    $stmt = $conn->prepare("DELETE FROM email_templates WHERE id = ? AND professor_id = ?");
-    $stmt->bind_param("ii", $id, $professor_id);
-    if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'message' => 'Template deleted']);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Failed to delete template']);
-    }
-}
-
-function getSentEmails() {
-    global $conn, $professor_id;
-    $stmt = $conn->prepare("
-        SELECT eq.*, CONCAT(s.first_name, ' ', s.last_name) as recipient_name
-        FROM email_queue eq
-        JOIN students s ON s.id = eq.to_student_id
-        WHERE eq.from_professor_id = ?
-        ORDER BY eq.created_at DESC
-        LIMIT 100
-    ");
-    $stmt->bind_param("i", $professor_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $emails = [];
-    while ($row = $result->fetch_assoc()) {
-        $emails[] = $row;
-    }
-    echo json_encode(['success' => true, 'emails' => $emails]);
-}
-
-function processEmails() {
-    global $conn, $professor_id;
-    
-    // Get pending emails from this professor
-    $stmt = $conn->prepare("
-        SELECT 
-            eq.*,
-            s.email as student_email,
-            CONCAT(s.first_name, ' ', s.last_name) as student_name,
-            CONCAT(p.first_name, ' ', p.last_name) as professor_name,
-            p.email as professor_email
-        FROM email_queue eq
-        JOIN students s ON s.id = eq.to_student_id
-        JOIN professors p ON p.id = eq.from_professor_id
-        WHERE eq.status = 'pending' AND eq.from_professor_id = ?
-        ORDER BY eq.created_at ASC
-        LIMIT 50
-    ");
-    
-    $stmt->bind_param("i", $professor_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    $sent_count = 0;
-    $failed_count = 0;
-    
-    while ($email = $result->fetch_assoc()) {
-        try {
-            // Prepare email headers
-            $headers = "From: " . $email['professor_name'] . " <advising@dlsu.edu.ph>\r\n";
-            $headers .= "Reply-To: " . $email['professor_email'] . "\r\n";
-            $headers .= "X-Mailer: PHP/" . phpversion() . "\r\n";
-            $headers .= "MIME-Version: 1.0\r\n";
-            $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-            
-            // Send email
-            $success = mail(
-                $email['student_email'],
-                $email['subject'],
-                $email['body'],
-                $headers
-            );
-            
-            if ($success) {
-                // Update status to sent
-                $update = $conn->prepare("UPDATE email_queue SET status = 'sent', sent_at = NOW() WHERE id = ?");
-                $update->bind_param("i", $email['id']);
-                $update->execute();
-                $sent_count++;
-            } else {
-                throw new Exception("mail() function returned false");
-            }
-            
-        } catch (Exception $e) {
-            // Update status to failed
-            $update = $conn->prepare("UPDATE email_queue SET status = 'failed', error_message = ? WHERE id = ?");
-            $error_msg = $e->getMessage();
-            $update->bind_param("si", $error_msg, $email['id']);
-            $update->execute();
-            $failed_count++;
-        }
-    }
-    
-    echo json_encode([
-        'success' => true,
-        'sent' => $sent_count,
-        'failed' => $failed_count,
-        'message' => "Sent: $sent_count, Failed: $failed_count"
-    ]);
-}
-
-// Get professor info for HTML display
-$stmt = $conn->prepare("SELECT CONCAT(first_name, ' ', last_name) as full_name, last_name FROM professors WHERE id = ?");
+$stmt = $conn->prepare("SELECT CONCAT(first_name, ' ', last_name) as full_name FROM professors WHERE id = ?");
 $stmt->bind_param("i", $professor_id);
 $stmt->execute();
-$professor = $stmt->get_result()->fetch_assoc();
-$professor_name = $professor['full_name'];
+$professor_name = $stmt->get_result()->fetch_assoc()['full_name'];
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -267,51 +47,30 @@ $professor_name = $professor['full_name'];
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; font-family: inherit; }
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #00A36C; }
         .form-group textarea { min-height: 150px; resize: vertical; }
-        .form-group small { color: #666; font-size: 13px; display: block; margin-top: 5px; }
         
-        /* Improved Recipient Selection */
+        /* Recipient Selector */
         .recipient-selector { border: 1px solid #ddd; border-radius: 5px; padding: 15px; background: #f8f9fa; }
         .recipient-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd; }
-        .recipient-count { font-size: 14px; color: #666; }
-        .recipient-count strong { color: #00A36C; }
-        .search-box-recipients { margin-bottom: 15px; }
-        .search-box-recipients input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
-        .search-box-recipients input:focus { outline: none; border-color: #00A36C; }
         .recipient-list { max-height: 250px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; background: white; }
-        .recipient-item { padding: 10px 15px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: background 0.2s; }
-        .recipient-item:last-child { border-bottom: none; }
+        .recipient-item { padding: 10px 15px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 10px; cursor: pointer; }
         .recipient-item:hover { background: #f8f9fa; }
         .recipient-item input[type="checkbox"] { cursor: pointer; width: 18px; height: 18px; }
-        .recipient-item label { cursor: pointer; flex: 1; font-size: 14px; margin: 0; }
-        .recipient-item .student-id { color: #999; font-size: 13px; margin-left: 8px; }
-        .select-actions { display: flex; gap: 10px; }
         .btn-small { padding: 5px 12px; background: #00A36C; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
-        .btn-small:hover { background: #00C97F; }
-        .btn-small.secondary { background: #6c757d; }
-        .btn-small.secondary:hover { background: #5a6268; }
         
         .checkbox-group { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
         .checkbox-group input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; }
-        .checkbox-group label { margin: 0; font-weight: normal; cursor: pointer; }
         .btn-group { display: flex; gap: 10px; }
-        .btn-primary { padding: 10px 25px; background: #00A36C; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 500; }
-        .btn-primary:hover { background: #00C97F; }
+        .btn-primary { padding: 10px 25px; background: #00A36C; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }
         .btn-secondary { padding: 10px 25px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }
-        .btn-secondary:hover { background: #5a6268; }
-        .table-container { overflow-x: auto; margin-top: 20px; }
+        
         .data-table { width: 100%; border-collapse: collapse; }
-        .data-table th { background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; font-size: 13px; color: #555; border-bottom: 2px solid #e0e0e0; }
-        .data-table td { padding: 12px; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
-        .data-table tr:hover { background: #f8f9fa; }
+        .data-table th { background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #e0e0e0; }
+        .data-table td { padding: 12px; border-bottom: 1px solid #f0f0f0; }
         .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
         .badge.success { background: #d4edda; color: #155724; }
         .badge.pending { background: #fff3cd; color: #856404; }
-        .badge.danger { background: #f8d7da; color: #721c24; }
-        .loading { text-align: center; padding: 40px; color: #666; }
+        .badge.failed { background: #f8d7da; color: #721c24; }
         .template-item { padding: 15px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 15px; background: #f8f9fa; }
-        .template-item h4 { margin-bottom: 8px; color: #333; font-size: 16px; }
-        .template-item p { font-size: 13px; color: #666; margin-bottom: 10px; }
-        .template-item .actions { display: flex; gap: 8px; }
     </style>
 </head>
 <body>
@@ -349,40 +108,31 @@ $professor_name = $professor['full_name'];
                     <button class="tab" onclick="switchTab('sent')">Sent Emails</button>
                 </div>
                 
-                <!-- Compose Email Tab -->
+                <!-- Compose Tab -->
                 <div id="compose-tab" class="tab-content active">
                     <form id="composeForm">
                         <div class="form-group">
                             <label>Recipients</label>
                             <div class="recipient-selector">
                                 <div class="recipient-header">
-                                    <div class="recipient-count">
-                                        <span id="selectedCount">0</span> student(s) selected
-                                    </div>
-                                    <div class="select-actions">
+                                    <div class="recipient-count"><span id="selectedCount">0</span> selected</div>
+                                    <div>
                                         <button type="button" class="btn-small" onclick="selectAll()">Select All</button>
-                                        <button type="button" class="btn-small secondary" onclick="deselectAll()">Deselect All</button>
+                                        <button type="button" class="btn-small" onclick="deselectAll()" style="background:#6c757d">Clear</button>
                                     </div>
                                 </div>
-                                
-                                <div class="search-box-recipients">
-                                    <input type="text" id="recipientSearch" placeholder="🔍 Search students by name or ID...">
-                                </div>
-                                
-                                <div class="recipient-list" id="recipientList">
-                                    <div class="loading" style="padding: 20px;">Loading students...</div>
-                                </div>
+                                <div class="recipient-list" id="recipientList"></div>
                             </div>
                         </div>
                         
                         <div class="form-group">
                             <label>Subject</label>
-                            <input type="text" id="subject" placeholder="Enter email subject" required>
+                            <input type="text" id="subject" required>
                         </div>
                         
                         <div class="form-group">
                             <label>Message</label>
-                            <textarea id="message" placeholder="Enter your message" required></textarea>
+                            <textarea id="message" required></textarea>
                         </div>
                         
                         <div class="checkbox-group">
@@ -399,56 +149,29 @@ $professor_name = $professor['full_name'];
                 
                 <!-- Templates Tab -->
                 <div id="templates-tab" class="tab-content">
-                    <button type="button" class="btn-primary" onclick="showNewTemplateForm()" style="margin-bottom: 20px;">Create New Template</button>
-                    
-                    <div id="newTemplateForm" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 5px; margin-bottom: 20px;">
-                        <h3 style="margin-bottom: 15px; color: #6a1b9a;">New Template</h3>
+                    <!-- Simple form to add template -->
+                    <div style="margin-bottom:20px; padding:15px; background:#eee; border-radius:5px;">
+                        <h4>Create New Template</h4>
                         <form id="templateForm">
-                            <div class="form-group">
-                                <label>Template Name</label>
-                                <input type="text" id="templateName" placeholder="e.g., Study Plan Reminder" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Subject</label>
-                                <input type="text" id="templateSubject" placeholder="Email subject" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Message Body</label>
-                                <textarea id="templateBody" placeholder="Template message" required style="min-height: 120px;"></textarea>
-                            </div>
-                            <div class="btn-group">
-                                <button type="submit" class="btn-primary">Save Template</button>
-                                <button type="button" class="btn-secondary" onclick="hideNewTemplateForm()">Cancel</button>
-                            </div>
+                            <input type="text" id="tplName" placeholder="Template Name" style="width:100%; margin-bottom:5px; padding:8px;">
+                            <input type="text" id="tplSubject" placeholder="Subject" style="width:100%; margin-bottom:5px; padding:8px;">
+                            <textarea id="tplBody" placeholder="Body" style="width:100%; height:80px; margin-bottom:5px; padding:8px;"></textarea>
+                            <button type="submit" class="btn-primary">Save Template</button>
                         </form>
                     </div>
-                    
-                    <div id="templatesList">
-                        <div class="loading">Loading templates...</div>
-                    </div>
+                    <div id="templatesList">Loading...</div>
                 </div>
                 
                 <!-- Sent Emails Tab -->
                 <div id="sent-tab" class="tab-content">
-                    <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-                        <button type="button" class="btn-primary" onclick="processQueuedEmails()">Process Pending Emails</button>
-                        <button type="button" class="btn-secondary" onclick="loadSentEmails()">Refresh</button>
+                    <div style="margin-bottom: 15px;">
+                        <button class="btn-primary" onclick="processEmails()">Process Pending Emails</button>
+                        <button class="btn-secondary" onclick="loadSentEmails()">Refresh</button>
                     </div>
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Recipient</th>
-                                    <th>Subject</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="sentEmailsTable">
-                                <tr><td colspan="4" class="loading">Loading sent emails...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <table class="data-table">
+                        <thead><tr><th>Date</th><th>Recipient</th><th>Subject</th><th>Status</th></tr></thead>
+                        <tbody id="sentEmailsTable"></tbody>
+                    </table>
                 </div>
             </div>
         </main>
@@ -458,15 +181,10 @@ $professor_name = $professor['full_name'];
     let allStudents = [];
     let selectedStudents = new Set();
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', () => {
         loadStudents();
         loadTemplates();
         loadSentEmails();
-        
-        // Search functionality
-        document.getElementById('recipientSearch').addEventListener('input', function() {
-            filterStudents(this.value);
-        });
     });
 
     function switchTab(tab) {
@@ -474,86 +192,48 @@ $professor_name = $professor['full_name'];
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         event.target.classList.add('active');
         document.getElementById(tab + '-tab').classList.add('active');
-        if (tab === 'templates') loadTemplates();
-        if (tab === 'sent') loadSentEmails();
-    }
-
-    function showTemplates() {
-        document.querySelectorAll('.tab')[1].click();
     }
 
     function loadStudents() {
-        fetch('prof_email.php?action=get_advisees')
-        .then(response => response.json())
+        // Pointing to prof_email_api.php
+        fetch('prof_email_api.php?action=get_advisees')
+        .then(r => r.json())
         .then(data => {
-            if (data.success) {
+            if(data.success) {
                 allStudents = data.students;
-                renderStudentList(allStudents);
+                const list = document.getElementById('recipientList');
+                list.innerHTML = allStudents.map(s => `
+                    <div class="recipient-item" onclick="toggleStudent(${s.id})">
+                        <input type="checkbox" id="s_${s.id}" ${selectedStudents.has(s.id) ? 'checked' : ''}>
+                        <label>${s.full_name} (${s.id_number})</label>
+                    </div>
+                `).join('');
             }
         });
     }
 
-    function renderStudentList(students) {
-        const list = document.getElementById('recipientList');
-        if (students.length === 0) {
-            list.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No students found</div>';
-            return;
-        }
-        
-        list.innerHTML = students.map(s => `
-            <div class="recipient-item" onclick="toggleStudent(${s.id})">
-                <input type="checkbox" id="student_${s.id}" value="${s.id}" ${selectedStudents.has(s.id) ? 'checked' : ''} onclick="event.stopPropagation(); toggleStudent(${s.id})">
-                <label for="student_${s.id}">${s.name}<span class="student-id">${s.id_number}</span></label>
-            </div>
-        `).join('');
-        
-        updateSelectedCount();
-    }
-
     function toggleStudent(id) {
-        if (selectedStudents.has(id)) {
-            selectedStudents.delete(id);
-        } else {
-            selectedStudents.add(id);
-        }
-        const checkbox = document.getElementById('student_' + id);
-        if (checkbox) checkbox.checked = selectedStudents.has(id);
-        updateSelectedCount();
+        if(selectedStudents.has(id)) selectedStudents.delete(id);
+        else selectedStudents.add(id);
+        document.getElementById('s_'+id).checked = selectedStudents.has(id);
+        document.getElementById('selectedCount').textContent = selectedStudents.size;
     }
 
     function selectAll() {
-        const visibleStudents = document.querySelectorAll('.recipient-item:not([style*="display: none"]) input[type="checkbox"]');
-        visibleStudents.forEach(cb => {
-            selectedStudents.add(parseInt(cb.value));
-            cb.checked = true;
-        });
-        updateSelectedCount();
+        allStudents.forEach(s => selectedStudents.add(s.id));
+        loadStudents(); // re-render
+        document.getElementById('selectedCount').textContent = allStudents.length;
     }
 
     function deselectAll() {
         selectedStudents.clear();
-        document.querySelectorAll('.recipient-item input[type="checkbox"]').forEach(cb => cb.checked = false);
-        updateSelectedCount();
-    }
-
-    function updateSelectedCount() {
-        document.getElementById('selectedCount').textContent = selectedStudents.size;
-    }
-
-    function filterStudents(search) {
-        const filtered = allStudents.filter(s => 
-            s.name.toLowerCase().includes(search.toLowerCase()) || 
-            s.id_number.includes(search)
-        );
-        renderStudentList(filtered);
+        loadStudents();
+        document.getElementById('selectedCount').textContent = 0;
     }
 
     document.getElementById('composeForm').addEventListener('submit', function(e) {
         e.preventDefault();
-        if (selectedStudents.size === 0) { 
-            alert('Please select at least one recipient'); 
-            return; 
-        }
+        if(selectedStudents.size === 0) return alert('Select recipients');
         
         const formData = new FormData();
         formData.append('action', 'send_email');
@@ -561,141 +241,94 @@ $professor_name = $professor['full_name'];
         formData.append('subject', document.getElementById('subject').value);
         formData.append('message', document.getElementById('message').value);
         formData.append('send_immediately', document.getElementById('sendImmediately').checked ? '1' : '0');
-        
-        fetch('prof_email.php', { method: 'POST', body: formData })
-        .then(response => response.json())
+
+        fetch('prof_email_api.php', { method: 'POST', body: formData })
+        .then(r => r.json())
         .then(data => {
-            if (data.success) {
-                alert(data.message);
+            alert(data.message);
+            if(data.success) {
                 document.getElementById('subject').value = '';
                 document.getElementById('message').value = '';
                 deselectAll();
                 loadSentEmails();
-            } else { 
-                alert('Error: ' + data.message); 
             }
         });
     });
-
-    function loadTemplates() {
-        fetch('prof_email.php?action=get_templates')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const list = document.getElementById('templatesList');
-                if (data.templates.length === 0) {
-                    list.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">No templates yet</p>';
-                    return;
-                }
-                list.innerHTML = data.templates.map(t => `
-                    <div class="template-item">
-                        <h4>${t.template_name}</h4>
-                        <p><strong>Subject:</strong> ${t.subject}</p>
-                        <p style="white-space: pre-wrap;">${t.body.substring(0, 150)}${t.body.length > 150 ? '...' : ''}</p>
-                        <div class="actions">
-                            <button class="btn-secondary" onclick="useTemplate(${t.id})">Use Template</button>
-                            <button class="btn-secondary" onclick="deleteTemplate(${t.id})" style="background: #dc3545;">Delete</button>
-                        </div>
-                    </div>
-                `).join('');
-            }
-        });
-    }
-
-    function showNewTemplateForm() {
-        document.getElementById('newTemplateForm').style.display = 'block';
-    }
-
-    function hideNewTemplateForm() {
-        document.getElementById('newTemplateForm').style.display = 'none';
-        document.getElementById('templateForm').reset();
-    }
-
-    document.getElementById('templateForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const formData = new FormData();
-        formData.append('action', 'save_template');
-        formData.append('template_name', document.getElementById('templateName').value);
-        formData.append('subject', document.getElementById('templateSubject').value);
-        formData.append('body', document.getElementById('templateBody').value);
-        fetch('prof_email.php', { method: 'POST', body: formData })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                hideNewTemplateForm();
-                loadTemplates();
-            } else { alert('Error: ' + data.message); }
-        });
-    });
-
-    function useTemplate(id) {
-        fetch(`prof_email.php?action=get_template&id=${id}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                document.getElementById('subject').value = data.template.subject;
-                document.getElementById('message').value = data.template.body;
-                document.querySelectorAll('.tab')[0].click();
-                alert('Template loaded into composer');
-            }
-        });
-    }
-
-    function deleteTemplate(id) {
-        if (!confirm('Delete this template?')) return;
-        const formData = new FormData();
-        formData.append('action', 'delete_template');
-        formData.append('id', id);
-        fetch('prof_email.php', { method: 'POST', body: formData })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                loadTemplates();
-            } else { alert('Error: ' + data.message); }
-        });
-    }
 
     function loadSentEmails() {
-        fetch('prof_email.php?action=get_sent_emails')
-        .then(response => response.json())
+        fetch('prof_email_api.php?action=get_sent_emails')
+        .then(r => r.json())
         .then(data => {
-            if (data.success) {
+            if(data.success) {
                 const tbody = document.getElementById('sentEmailsTable');
-                if (data.emails.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: #999;">No sent emails yet</td></tr>';
-                    return;
-                }
                 tbody.innerHTML = data.emails.map(e => `
                     <tr>
-                        <td>${new Date(e.created_at).toLocaleString('en-US', {year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'})}</td>
-                        <td>${e.recipient_name}</td>
+                        <td>${e.created_at}</td>
+                        <td>${e.recipient_name || 'Unknown'}</td>
                         <td>${e.subject}</td>
-                        <td><span class="badge ${e.status === 'sent' ? 'success' : e.status === 'pending' ? 'pending' : 'danger'}">${e.status}</span></td>
+                        <td><span class="badge ${e.status === 'sent' ? 'success' : (e.status === 'failed' ? 'failed' : 'pending')}">${e.status}</span></td>
                     </tr>
                 `).join('');
             }
         });
     }
 
-    function processQueuedEmails() {
-        if (!confirm('Process all pending emails now? This will send all queued emails from you.')) return;
-        
-        fetch('prof_email.php?action=process_emails')
-        .then(response => response.json())
+    function processEmails() {
+        fetch('prof_email_api.php?action=process_emails')
+        .then(r => r.json())
         .then(data => {
-            if (data.success) {
-                alert(data.message);
-                loadSentEmails();
-            } else {
-                alert('Error: ' + data.message);
-            }
-        })
-        .catch(error => {
-            alert('Error processing emails: ' + error);
+            alert(data.message);
+            loadSentEmails();
         });
     }
+
+    // Template functions
+    function loadTemplates() {
+        fetch('prof_email_api.php?action=get_templates').then(r=>r.json()).then(d=>{
+            if(d.success) {
+                document.getElementById('templatesList').innerHTML = d.templates.map(t => `
+                    <div class="template-item">
+                        <strong>${t.template_name}</strong>
+                        <p>${t.subject}</p>
+                        <button class="btn-small" onclick="useTemplate('${t.subject}', '${t.body.replace(/'/g, "\\'")}')">Use</button>
+                        <button class="btn-small" style="background:red" onclick="deleteTemplate(${t.id})">Delete</button>
+                    </div>
+                `).join('');
+            }
+        });
+    }
+
+    function useTemplate(sub, body) {
+        document.getElementById('subject').value = sub;
+        document.getElementById('message').value = body;
+        switchTab('compose');
+    }
+
+    function deleteTemplate(id) {
+        if(!confirm('Delete?')) return;
+        const fd = new FormData();
+        fd.append('action', 'delete_template');
+        fd.append('id', id);
+        fetch('prof_email_api.php', {method:'POST', body:fd}).then(r=>r.json()).then(d=>{
+            loadTemplates();
+        });
+    }
+
+    document.getElementById('templateForm').addEventListener('submit', function(e){
+        e.preventDefault();
+        const fd = new FormData();
+        fd.append('action', 'save_template');
+        fd.append('template_name', document.getElementById('tplName').value);
+        fd.append('subject', document.getElementById('tplSubject').value);
+        fd.append('body', document.getElementById('tplBody').value);
+        fetch('prof_email_api.php', {method:'POST', body:fd}).then(r=>r.json()).then(d=>{
+            alert(d.message);
+            loadTemplates();
+            e.target.reset();
+        });
+    });
+    
+    function showTemplates() { switchTab('templates'); }
     </script>
 </body>
 </html>
