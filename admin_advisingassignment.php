@@ -14,19 +14,19 @@ require_once 'config.php';
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
         .container { display: flex; min-height: 100vh; }
-        .sidebar { width: 260px; background: #6a1b9a; color: white; position: fixed; height: 100vh; overflow-y: auto; }
-        .sidebar-header { padding: 25px 20px; background: #4a148c; }
+        .sidebar { width: 260px; background: #00A36C; color: white; position: fixed; height: 100vh; overflow-y: auto; }
+        .sidebar-header { padding: 25px 20px; background: #006B4A; }
         .sidebar-header h2 { font-size: 18px; margin-bottom: 5px; }
         .sidebar-header p { font-size: 13px; opacity: 0.8; }
         .sidebar-menu { padding: 20px 0; }
         .menu-item { padding: 15px 25px; color: white; text-decoration: none; display: block; transition: all 0.3s; border-left: 3px solid transparent; }
-        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #BA68C8; }
+        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #7FE5B8; }
         .main-content { margin-left: 260px; flex: 1; padding: 30px; width: calc(100% - 260px); }
         .top-bar { background: white; padding: 20px 30px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .top-bar h1 { font-size: 28px; color: #6a1b9a; }
+        .top-bar h1 { font-size: 28px; color: #00A36C; }
         .logout-btn { padding: 8px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; text-decoration: none; font-size: 14px; }
         .content-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        .content-card h2 { font-size: 22px; color: #6a1b9a; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
+        .content-card h2 { font-size: 22px; color: #00A36C; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
         .table-container { overflow-x: auto; }
         .data-table { width: 100%; border-collapse: collapse; }
         .data-table th { background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; font-size: 13px; color: #555; border-bottom: 2px solid #e0e0e0; }
@@ -39,13 +39,13 @@ require_once 'config.php';
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); overflow-y: auto; }
         .modal-content { background-color: white; margin: 50px auto; padding: 0; border-radius: 10px; width: 90%; max-width: 1000px; max-height: 85vh; overflow-y: auto; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 25px 30px; border-bottom: 2px solid #f0f0f0; position: sticky; top: 0; background: white; z-index: 10; }
-        .modal-header h3 { color: #6a1b9a; font-size: 22px; }
+        .modal-header h3 { color: #00A36C; font-size: 22px; }
         .close { font-size: 28px; font-weight: bold; color: #aaa; cursor: pointer; }
         .close:hover { color: #000; }
         .modal-body { padding: 30px; }
         .assignment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
         .assignment-column { border: 2px solid #e0e0e0; border-radius: 8px; padding: 20px; }
-        .assignment-column h4 { color: #6a1b9a; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; }
+        .assignment-column h4 { color: #00A36C; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; }
         .student-list { max-height: 400px; overflow-y: auto; }
         .student-item { padding: 12px; margin: 5px 0; background: #f8f9fa; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.3s; border: 2px solid transparent; }
         .student-item:hover { background: #e3f2fd; border-color: #90caf9; }
