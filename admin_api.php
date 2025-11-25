@@ -205,13 +205,208 @@ function getUnassignedStudents() { global $conn; $res=$conn->query("SELECT * FRO
 function assignStudentToAdviser() { global $conn; $sid=$_POST['student_id']; $pid=$_POST['professor_id']; $conn->query("UPDATE students SET advisor_id=$pid WHERE id=$sid"); echo json_encode(['success'=>true]); }
 function getAdviserStudents() { global $conn; $pid=$_GET['professor_id']; $res=$conn->query("SELECT * FROM students WHERE advisor_id=$pid"); $data=[]; while($r=$res->fetch_assoc())$data[]=$r; echo json_encode(['success'=>true,'students'=>$data]); }
 function removeStudentFromAdviser() { global $conn; $sid=$_POST['student_id']; $conn->query("UPDATE students SET advisor_id=NULL WHERE id=$sid"); echo json_encode(['success'=>true]); }
-// ... Stubbing the rest for valid syntax, ensure you copy full logic ...
-function addSingleStudent() { echo json_encode(['success'=>false,'message'=>'Not implemented in snippet']); }
-function editStudent() { echo json_encode(['success'=>false,'message'=>'Not implemented in snippet']); }
-function deleteStudent() { echo json_encode(['success'=>false,'message'=>'Not implemented in snippet']); }
-function addSingleProfessor() { echo json_encode(['success'=>false,'message'=>'Not implemented in snippet']); }
-function editProfessor() { echo json_encode(['success'=>false,'message'=>'Not implemented in snippet']); }
-function deleteProfessor() { echo json_encode(['success'=>false,'message'=>'Not implemented in snippet']); }
+
+// Helper function to send email notification
+function sendAccountEmail($email, $name, $idNumber, $userType) {
+    try {
+        $mail = new PHPMailer(true);
+        $mail->isSMTP();
+        $mail->Host = MAILER_HOST;
+        $mail->SMTPAuth = true;
+        $mail->Username = MAILER_USERNAME;
+        $mail->Password = MAILER_PASSWORD;
+        $mail->SMTPSecure = MAILER_ENCRYPTION;
+        $mail->Port = MAILER_PORT;
+        $mail->setFrom(MAILER_FROM_EMAIL, MAILER_FROM_NAME);
+        $mail->addAddress($email, $name);
+        $mail->Subject = 'Academic Advising System - Account Created';
+        
+        $portalUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . "/login.php";
+        
+        $mail->isHTML(true);
+        $mail->Body = "
+            <h2>Welcome to the Academic Advising System</h2>
+            <p>Dear {$name},</p>
+            <p>Your {$userType} account has been successfully created. Here are your login credentials:</p>
+            <div style='background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;'>
+                <strong>ID Number:</strong> {$idNumber}<br>
+                <strong>Default Password:</strong> {$idNumber}
+            </div>
+            <p><strong>Important:</strong> Please change your password after your first login for security purposes.</p>
+            <p>You can access the system at: <a href='{$portalUrl}'>{$portalUrl}</a></p>
+            <p>If you have any questions, please contact the system administrator.</p>
+            <p>Best regards,<br>Academic Advising System</p>
+        ";
+        $mail->AltBody = "Welcome to the Academic Advising System\n\nDear {$name},\n\nYour {$userType} account has been created.\n\nID Number: {$idNumber}\nDefault Password: {$idNumber}\n\nPlease change your password after your first login.\n\nPortal: {$portalUrl}";
+        
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        error_log("Email failed: " . $e->getMessage());
+        return false;
+    }
+}
+
+function addSingleStudent() {
+    global $conn;
+    
+    $idNumber = $_POST['id_number'];
+    $firstName = $_POST['first_name'];
+    $middleName = $_POST['middle_name'] ?? '';
+    $lastName = $_POST['last_name'];
+    $college = $_POST['college'];
+    $department = $_POST['department'];
+    $program = $_POST['program'];
+    $specialization = $_POST['specialization'] ?? 'N/A';
+    $phone = $_POST['phone_number'];
+    $email = $_POST['email'];
+    $guardianName = $_POST['guardian_name'];
+    $guardianPhone = $_POST['guardian_phone'];
+    
+    // Check if ID already exists
+    $stmt = $conn->prepare("SELECT id FROM students WHERE id_number = ?");
+    $stmt->bind_param("s", $idNumber);
+    $stmt->execute();
+    if ($stmt->get_result()->num_rows > 0) {
+        echo json_encode(['success' => false, 'message' => 'Student ID already exists']);
+        return;
+    }
+    
+    // Hash default password (ID number)
+    $passwordHash = password_hash($idNumber, PASSWORD_DEFAULT);
+    
+    // Insert student
+    $stmt = $conn->prepare("INSERT INTO students (id_number, password, first_name, middle_name, last_name, college, department, program, specialization, phone_number, email, parent_guardian_name, parent_guardian_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssssssssssss", $idNumber, $passwordHash, $firstName, $middleName, $lastName, $college, $department, $program, $specialization, $phone, $email, $guardianName, $guardianPhone);
+    
+    if ($stmt->execute()) {
+        $fullName = trim("$firstName $middleName $lastName");
+        sendAccountEmail($email, $fullName, $idNumber, 'student');
+        echo json_encode(['success' => true, 'message' => 'Student added successfully. Login credentials sent to email.']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+    }
+}
+
+function editStudent() {
+    global $conn;
+    
+    $studentId = $_POST['student_id'];
+    $firstName = $_POST['first_name'];
+    $middleName = $_POST['middle_name'] ?? '';
+    $lastName = $_POST['last_name'];
+    $college = $_POST['college'];
+    $department = $_POST['department'];
+    $program = $_POST['program'];
+    $specialization = $_POST['specialization'] ?? 'N/A';
+    $phone = $_POST['phone_number'];
+    $email = $_POST['email'];
+    $guardianName = $_POST['guardian_name'];
+    $guardianPhone = $_POST['guardian_phone'];
+    
+    $stmt = $conn->prepare("UPDATE students SET first_name=?, middle_name=?, last_name=?, college=?, department=?, program=?, specialization=?, phone_number=?, email=?, parent_guardian_name=?, parent_guardian_number=? WHERE id=?");
+    $stmt->bind_param("sssssssssssi", $firstName, $middleName, $lastName, $college, $department, $program, $specialization, $phone, $email, $guardianName, $guardianPhone, $studentId);
+    
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Student updated successfully']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+    }
+}
+
+function deleteStudent() {
+    global $conn;
+    $studentId = $_POST['student_id'];
+    
+    $stmt = $conn->prepare("DELETE FROM students WHERE id = ?");
+    $stmt->bind_param("i", $studentId);
+    
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Student deleted successfully']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+    }
+}
+
+function addSingleProfessor() {
+    global $conn;
+    
+    $idNumber = $_POST['id_number'];
+    $firstName = $_POST['first_name'];
+    $middleName = $_POST['middle_name'] ?? '';
+    $lastName = $_POST['last_name'];
+    $department = $_POST['department'];
+    $email = $_POST['email'];
+    
+    // Check if ID already exists
+    $stmt = $conn->prepare("SELECT id FROM professors WHERE id_number = ?");
+    $stmt->bind_param("s", $idNumber);
+    $stmt->execute();
+    if ($stmt->get_result()->num_rows > 0) {
+        echo json_encode(['success' => false, 'message' => 'Professor ID already exists']);
+        return;
+    }
+    
+    // Hash default password (ID number)
+    $passwordHash = password_hash($idNumber, PASSWORD_DEFAULT);
+    
+    // Insert professor
+    $stmt = $conn->prepare("INSERT INTO professors (id_number, password, first_name, middle_name, last_name, department, email) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssssss", $idNumber, $passwordHash, $firstName, $middleName, $lastName, $department, $email);
+    
+    if ($stmt->execute()) {
+        $fullName = trim("$firstName $middleName $lastName");
+        sendAccountEmail($email, $fullName, $idNumber, 'professor');
+        echo json_encode(['success' => true, 'message' => 'Professor added successfully. Login credentials sent to email.']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+    }
+}
+
+function editProfessor() {
+    global $conn;
+    
+    $professorId = $_POST['professor_id'];
+    $firstName = $_POST['first_name'];
+    $middleName = $_POST['middle_name'] ?? '';
+    $lastName = $_POST['last_name'];
+    $department = $_POST['department'];
+    $email = $_POST['email'];
+    
+    $stmt = $conn->prepare("UPDATE professors SET first_name=?, middle_name=?, last_name=?, department=?, email=? WHERE id=?");
+    $stmt->bind_param("sssssi", $firstName, $middleName, $lastName, $department, $email, $professorId);
+    
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Professor updated successfully']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+    }
+}
+
+function deleteProfessor() {
+    global $conn;
+    $professorId = $_POST['professor_id'];
+    
+    // Check if professor has assigned students
+    $stmt = $conn->prepare("SELECT COUNT(*) as count FROM students WHERE advisor_id = ?");
+    $stmt->bind_param("i", $professorId);
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    
+    if ($result['count'] > 0) {
+        echo json_encode(['success' => false, 'message' => 'Cannot delete professor with assigned advisees. Please reassign students first.']);
+        return;
+    }
+    
+    $stmt = $conn->prepare("DELETE FROM professors WHERE id = ?");
+    $stmt->bind_param("i", $professorId);
+    
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Professor deleted successfully']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+    }
+}
 function getCourseCatalog() { global $conn; $res=$conn->query("SELECT * FROM course_catalog"); $data=[]; while($r=$res->fetch_assoc())$data[]=$r; echo json_encode(['success'=>true,'courses'=>$data]); }
 function addCourse() { echo json_encode(['success'=>false,'message'=>'Not implemented in snippet']); }
 function updateCourse() { echo json_encode(['success'=>false,'message'=>'Not implemented in snippet']); }
