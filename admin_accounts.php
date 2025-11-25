@@ -411,7 +411,6 @@ require_once 'config.php';
                         <td>${failedUnits} ${failedBadge}</td>
                         <td>${statusBadge}</td>
                         <td style="white-space: nowrap;">
-                            <button class="btn-view-pass" onclick="viewPassword(${student.id}, 'student')">👁 View</button>
                             <button class="btn-edit" onclick="editStudent(${student.id})">Edit</button>
                             <button class="btn-delete" onclick="deleteStudent(${student.id}, '${student.id_number}')">Delete</button>
                         </td>
@@ -455,7 +454,6 @@ require_once 'config.php';
                         <td>${prof.email}</td>
                         <td>${prof.advisee_count} students</td>
                         <td style="white-space: nowrap;">
-                            <button class="btn-view-pass" onclick="viewPassword(${prof.id}, 'professor')">👁 View</button>
                             <button class="btn-edit" onclick="editProfessor(${prof.id})">Edit</button>
                             <button class="btn-delete" onclick="deleteProfessor(${prof.id}, '${prof.id_number}')">Delete</button>
                         </td>
