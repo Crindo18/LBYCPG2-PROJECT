@@ -206,9 +206,9 @@ function getStudentsList() {
 // (getStudentDetails, getProfessorDetails, addSingleStudent, etc.)
 function getStudentDetails() { global $conn; $id=$_GET['student_id']; $stmt=$conn->prepare("SELECT * FROM students WHERE id=?"); $stmt->bind_param("i",$id); $stmt->execute(); echo json_encode(['success'=>true, 'student'=>$stmt->get_result()->fetch_assoc()]); }
 function getProfessorDetails() { global $conn; $id=$_GET['professor_id']; $stmt=$conn->prepare("SELECT * FROM professors WHERE id=?"); $stmt->bind_param("i",$id); $stmt->execute(); echo json_encode(['success'=>true, 'professor'=>$stmt->get_result()->fetch_assoc()]); }
-function getUnassignedStudents() { global $conn; $res=$conn->query("SELECT * FROM students WHERE advisor_id IS NULL"); $data=[]; while($r=$res->fetch_assoc())$data[]=$r; echo json_encode(['success'=>true,'students'=>$data]); }
+function getUnassignedStudents() { global $conn; $res=$conn->query("SELECT s.*, CONCAT(s.first_name, ' ', s.last_name) as full_name FROM students s WHERE s.advisor_id IS NULL"); $data=[]; while($r=$res->fetch_assoc())$data[]=$r; echo json_encode(['success'=>true,'students'=>$data]); }
 function assignStudentToAdviser() { global $conn; $sid=$_POST['student_id']; $pid=$_POST['professor_id']; $conn->query("UPDATE students SET advisor_id=$pid WHERE id=$sid"); echo json_encode(['success'=>true]); }
-function getAdviserStudents() { global $conn; $pid=$_GET['professor_id']; $res=$conn->query("SELECT * FROM students WHERE advisor_id=$pid"); $data=[]; while($r=$res->fetch_assoc())$data[]=$r; echo json_encode(['success'=>true,'students'=>$data]); }
+function getAdviserStudents() { global $conn; $pid=$_GET['professor_id']; $res=$conn->query("SELECT s.*, CONCAT(s.first_name, ' ', s.last_name) as full_name FROM students s WHERE s.advisor_id=$pid"); $data=[]; while($r=$res->fetch_assoc())$data[]=$r; echo json_encode(['success'=>true,'students'=>$data]); }
 function removeStudentFromAdviser() { global $conn; $sid=$_POST['student_id']; $conn->query("UPDATE students SET advisor_id=NULL WHERE id=$sid"); echo json_encode(['success'=>true]); }
 
 // Helper function to send email notification
