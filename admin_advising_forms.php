@@ -205,14 +205,14 @@ $admin_username = $stmt->get_result()->fetch_assoc()['username'];
         // Update statistics
         function updateStatistics(forms) {
             document.getElementById('totalForms').textContent = forms.length;
-            document.getElementById('pendingForms').textContent = forms.filter(f => !f.cleared && !f.adviser_feedback).length;
-            document.getElementById('clearedForms').textContent = forms.filter(f => f.cleared).length;
+            document.getElementById('pendingForms').textContent = forms.filter(f => f.status === 'pending').length;
+            document.getElementById('clearedForms').textContent = forms.filter(f => f.status === 'approved').length;
             
-            const highRisk = forms.filter(f => f.overall_failed_units >= 15).length;
+            const highRisk = forms.filter(f => parseInt(f.overall_failed_units) >= 15).length;
             document.getElementById('highRiskCount').textContent = highRisk;
             
             const avgFailed = forms.length > 0 
-                ? Math.round(forms.reduce((sum, f) => sum + parseInt(f.overall_failed_units), 0) / forms.length)
+                ? Math.round(forms.reduce((sum, f) => sum + (parseInt(f.overall_failed_units) || 0), 0) / forms.length)
                 : 0;
             document.getElementById('avgFailedUnits').textContent = avgFailed;
         }
@@ -227,18 +227,21 @@ $admin_username = $stmt->get_result()->fetch_assoc()['username'];
             }
             
             let html = '<div class="table-container"><table class="data-table">';
-            html += '<thead><tr><th>Student</th><th>ID</th><th>Program</th><th>Adviser</th><th>Term</th><th>Failed Units</th><th>GPA</th><th>Status</th><th>Submitted</th></tr></thead><tbody>';
+            html += '<thead><tr><th>Student</th><th>ID</th><th>Program</th><th>Adviser</th><th>Academic Year - Term</th><th>Failed Units</th><th>CGPA</th><th>Status</th><th>Submitted</th></tr></thead><tbody>';
             
             forms.forEach(form => {
                 let statusBadge = '<span class="badge pending">Pending</span>';
-                if (form.cleared) {
+                if (form.status === 'approved') {
                     statusBadge = '<span class="badge cleared">Cleared</span>';
-                } else if (form.adviser_feedback) {
-                    statusBadge = '<span class="badge reviewed">Reviewed</span>';
+                } else if (form.status === 'revision_requested') {
+                    statusBadge = '<span class="badge reviewed">Revision Requested</span>';
+                } else if (form.status === 'rejected') {
+                    statusBadge = '<span class="badge high-risk">Rejected</span>';
                 }
                 
                 let riskBadge = '';
-                if (form.overall_failed_units >= 15) {
+                const failedUnits = parseInt(form.overall_failed_units) || 0;
+                if (failedUnits >= 15) {
                     riskBadge = '<br><span class="badge high-risk">High Risk</span>';
                 }
                 
@@ -248,18 +251,11 @@ $admin_username = $stmt->get_result()->fetch_assoc()['username'];
                         <td>${form.student_id_number}</td>
                         <td>${form.program}</td>
                         <td>${form.adviser_name || 'Not Assigned'}</td>
-                        <td>${form.academic_year}<br>${form.term}</td>
-                        <td>
-                            Current: ${form.current_year_failed_units}<br>
-                            Total: ${form.overall_failed_units}
-                            ${riskBadge}
-                        </td>
-                        <td>
-                            Term: ${form.previous_term_gpa || 'N/A'}<br>
-                            CGPA: ${form.cumulative_gpa || 'N/A'}
-                        </td>
+                        <td>${form.academic_year} - ${form.term}</td>
+                        <td>${form.overall_failed_units}${riskBadge}</td>
+                        <td>${form.cumulative_gpa || 'N/A'}</td>
                         <td>${statusBadge}</td>
-                        <td>${new Date(form.submission_date).toLocaleDateString()}</td>
+                        <td>${new Date(form.submitted_at).toLocaleDateString()}</td>
                     </tr>
                 `;
             });
@@ -284,20 +280,21 @@ $admin_username = $stmt->get_result()->fetch_assoc()['username'];
                 
                 let matchesStatus = true;
                 if (statusFilter === 'pending') {
-                    matchesStatus = !form.cleared && !form.adviser_feedback;
+                    matchesStatus = form.status === 'pending';
                 } else if (statusFilter === 'reviewed') {
-                    matchesStatus = form.adviser_feedback && !form.cleared;
+                    matchesStatus = form.status === 'revision_requested';
                 } else if (statusFilter === 'cleared') {
-                    matchesStatus = form.cleared;
+                    matchesStatus = form.status === 'approved';
                 }
                 
                 let matchesRisk = true;
+                const failedUnits = parseInt(form.overall_failed_units) || 0;
                 if (riskFilter === 'high') {
-                    matchesRisk = form.overall_failed_units >= 15;
+                    matchesRisk = failedUnits >= 15;
                 } else if (riskFilter === 'medium') {
-                    matchesRisk = form.overall_failed_units >= 6 && form.overall_failed_units < 15;
+                    matchesRisk = failedUnits >= 6 && failedUnits < 15;
                 } else if (riskFilter === 'low') {
-                    matchesRisk = form.overall_failed_units < 6;
+                    matchesRisk = failedUnits < 6;
                 }
                 
                 return matchesSearch && matchesProgram && matchesStatus && matchesRisk;
@@ -317,10 +314,12 @@ $admin_username = $stmt->get_result()->fetch_assoc()['username'];
             
             allForms.forEach(form => {
                 let status = 'Pending';
-                if (form.cleared) status = 'Cleared';
-                else if (form.adviser_feedback) status = 'Reviewed';
+                if (form.status === 'approved') status = 'Cleared';
+                else if (form.status === 'revision_requested') status = 'Revision Requested';
+                else if (form.status === 'rejected') status = 'Rejected';
+                else if (form.status === 'pending') status = 'Pending';
                 
-                csv += `"${form.student_name}","${form.student_id_number}","${form.program}","${form.adviser_name || 'Not Assigned'}","${form.academic_year}","${form.term}",${form.current_year_failed_units},${form.overall_failed_units},"${form.previous_term_gpa || 'N/A'}","${form.cumulative_gpa || 'N/A'}","${status}","${new Date(form.submission_date).toLocaleDateString()}"\n`;
+                csv += `"${form.student_name}","${form.student_id_number}","${form.program}","${form.adviser_name || 'Not Assigned'}","${form.academic_year}","${form.term}",${form.current_year_failed_units || 0},${form.overall_failed_units || 0},"${form.previous_term_gpa || 'N/A'}","${form.cumulative_gpa || 'N/A'}","${status}","${new Date(form.submitted_at).toLocaleDateString()}"\n`;
             });
             
             const blob = new Blob([csv], { type: 'text/csv' });

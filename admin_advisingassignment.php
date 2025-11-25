@@ -201,28 +201,26 @@ require_once 'config.php';
             let html = '';
             professors.forEach(prof => {
                 const totalAdvisees = Number(prof.advisee_count) || 0;
-                const completed = Number(prof.completed_advisees) || 0;
-                const pending = Number(prof.pending_advisees) || 0;
-                const completion = totalAdvisees > 0 ? Math.round((completed / totalAdvisees) * 100) : 0;
+                // We'll display total advisees - completion tracking would need additional API endpoint
                 
                 html += `
                     <tr>
-                        <td>${prof.id_number}</td>
+                        <td><strong>${prof.id_number}</strong></td>
                         <td>${prof.full_name}</td>
                         <td>DECE</td>
-                        <td>${totalAdvisees}</td>
-                        <td>${completed}</td>
-                        <td>${pending}</td>
+                        <td><strong>${totalAdvisees}</strong> students</td>
+                        <td>-</td>
+                        <td>-</td>
                         <td>
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <div class="progress-bar" style="flex: 1;">
-                                    <div class="progress-fill" style="width: ${completion}%;"></div>
+                                    <div class="progress-fill" style="width: 0%;"></div>
                                 </div>
-                                <span style="font-size: 12px; font-weight: 600;">${completion}%</span>
+                                <span style="font-size: 12px; font-weight: 600;">-</span>
                             </div>
                         </td>
                         <td>
-                            <button class="btn-manage" onclick="manageAdvisees(${prof.id}, '${prof.full_name}', ${prof.advisee_count})">Manage</button>
+                            <button class="btn-manage" onclick="manageAdvisees(${prof.id}, '${prof.full_name.replace(/'/g, "\\'")}', ${prof.advisee_count})">Manage</button>
                         </td>
                     </tr>
                 `;
@@ -379,6 +377,64 @@ require_once 'config.php';
             const container = document.getElementById('assignedList');
             
             if (students.length === 0) {
+                container.innerHTML = '<div class="no-data">No assigned students</div>';
+                return;
+            }
+
+            let html = '';
+            students.forEach(student => {
+                const programShort = student.program.replace('BS ', '').replace('Electronics and Communications Engineering', 'ECE').replace('Electrical Engineering', 'EE').replace('Computer Engineering', 'CpE');
+                const failedUnits = parseInt(student.accumulated_failed_units) || 0;
+                let riskBadge = '';
+                if (failedUnits >= 25) {
+                    riskBadge = '<span class="badge danger" style="margin-left: 10px;">CRITICAL</span>';
+                } else if (failedUnits >= 15) {
+                    riskBadge = '<span class="badge warning" style="margin-left: 10px;">AT RISK</span>';
+                }
+                
+                html += `
+                    <div class="student-item" style="background: #f8f9fa; cursor: default;">
+                        <div class="student-info" style="flex: 1;">
+                            <div class="student-name">${student.full_name}</div>
+                            <div class="student-details">${student.id_number} • ${programShort} • Failed: ${failedUnits} units${riskBadge}</div>
+                        </div>
+                        <button class="btn-unassign" onclick="unassignStudent(${student.id})">Remove</button>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function unassignStudent(studentId) {
+            if (!confirm('Remove this student from the adviser?')) return;
+            
+            const formData = new FormData();
+            formData.append('action', 'remove_student_from_adviser');
+            formData.append('student_id', studentId);
+            
+            fetch('admin_api.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadUnassignedStudents();
+                    loadAssignedStudents(currentProfessorId);
+                    loadProfessors();
+                }
+            });
+        }
+
+        function closeModal() {
+            document.getElementById('assignmentModal').style.display = 'none';
+            selectedStudents = [];
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('assignmentModal');
+            if (event.target === modal) {
                 container.innerHTML = '<div class="no-data">No assigned students</div>';
                 return;
             }

@@ -54,6 +54,16 @@ function getAllAdvisingForms() {
         
         $forms = [];
         while ($row = $result->fetch_assoc()) {
+            // Parse form_data JSON to extract individual fields
+            if (!empty($row['form_data'])) {
+                $formData = json_decode($row['form_data'], true);
+                $row['academic_year'] = $formData['academic_year'] ?? 'N/A';
+                $row['term'] = $formData['term'] ?? 'N/A';
+                $row['current_year_failed_units'] = $formData['current_year_failed_units'] ?? 0;
+                $row['overall_failed_units'] = $formData['overall_failed_units'] ?? 0;
+                $row['previous_term_gpa'] = $formData['previous_term_gpa'] ?? 'N/A';
+                $row['cumulative_gpa'] = $formData['cumulative_gpa'] ?? 'N/A';
+            }
             $forms[] = $row;
         }
         
