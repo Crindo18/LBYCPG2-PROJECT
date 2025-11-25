@@ -5,6 +5,227 @@ requireStudent();
 require_once 'config.php';
 
 $student_id = $_SESSION['user_id'];
+
+// Handle API requests
+if (isset($_GET['action']) || isset($_POST['action'])) {
+    ob_start();
+    error_reporting(0);
+    ini_set('display_errors', 0);
+    ob_clean();
+    header('Content-Type: application/json');
+    
+    $action = $_POST['action'] ?? $_GET['action'] ?? '';
+    
+    switch ($action) {
+        case 'get_available_slots':
+            getAvailableSlots();
+            break;
+        case 'book_slot':
+            bookSlot();
+            break;
+        case 'cancel_booking':
+            cancelBooking();
+            break;
+        case 'get_my_bookings':
+            getMyBookings();
+            break;
+        default:
+            echo json_encode(['success' => false, 'message' => 'Invalid action']);
+    }
+    exit();
+}
+
+// API Functions
+function getAvailableSlots() {
+    global $conn, $student_id;
+    
+    // Get student's advisor
+    $stmt = $conn->prepare("SELECT advisor_id FROM students WHERE id = ?");
+    $stmt->bind_param("i", $student_id);
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    $advisor_id = $result['advisor_id'];
+    
+    if (!$advisor_id) {
+        echo json_encode(['success' => false, 'message' => 'No advisor assigned']);
+        return;
+    }
+    
+    // Get all available slots for the advisor (future dates and times only)
+    $stmt = $conn->prepare("
+        SELECT 
+            s.*,
+            CONCAT(p.first_name, ' ', p.last_name) as professor_name,
+            (SELECT COUNT(*) FROM student_appointments sa 
+             WHERE sa.schedule_id = s.id AND sa.status != 'cancelled') as booked_count
+        FROM advising_schedules s
+        JOIN professors p ON p.id = s.professor_id
+        WHERE s.professor_id = ? 
+        AND s.is_available = 1
+        AND (
+            s.schedule_date > CURDATE() 
+            OR (s.schedule_date = CURDATE() AND s.start_time > CURTIME())
+        )
+        ORDER BY s.schedule_date ASC, s.start_time ASC
+    ");
+    $stmt->bind_param("i", $advisor_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $slots = [];
+    while ($row = $result->fetch_assoc()) {
+        $row['available_slots'] = $row['max_slots'] - $row['booked_count'];
+        $row['is_fully_booked'] = $row['booked_count'] >= $row['max_slots'];
+        
+        // Check if student has already booked this slot
+        $check_stmt = $conn->prepare("SELECT id FROM student_appointments WHERE schedule_id = ? AND student_id = ? AND status != 'cancelled'");
+        $check_stmt->bind_param("ii", $row['id'], $student_id);
+        $check_stmt->execute();
+        $row['is_my_booking'] = $check_stmt->get_result()->num_rows > 0;
+        
+        $slots[] = $row;
+    }
+    
+    echo json_encode(['success' => true, 'slots' => $slots]);
+}
+
+function bookSlot() {
+    global $conn, $student_id;
+    
+    $slot_id = $_POST['slot_id'] ?? 0;
+    
+    // Check if slot is available
+    $stmt = $conn->prepare("
+        SELECT s.*, 
+        (SELECT COUNT(*) FROM student_appointments sa 
+         WHERE sa.schedule_id = s.id AND sa.status != 'cancelled') as booked_count
+        FROM advising_schedules s 
+        WHERE s.id = ? AND s.is_available = 1
+    ");
+    $stmt->bind_param("i", $slot_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows === 0) {
+        echo json_encode(['success' => false, 'message' => 'Slot not available']);
+        return;
+    }
+    
+    $slot = $result->fetch_assoc();
+    
+    // Check if slot is full
+    if ($slot['booked_count'] >= $slot['max_slots']) {
+        echo json_encode(['success' => false, 'message' => 'This slot is fully booked']);
+        return;
+    }
+    
+    // Check if slot has passed
+    $slot_datetime = $slot['schedule_date'] . ' ' . $slot['start_time'];
+    if (strtotime($slot_datetime) < time()) {
+        echo json_encode(['success' => false, 'message' => 'This slot has already passed']);
+        return;
+    }
+    
+    // Verify this is student's advisor
+    $stmt = $conn->prepare("SELECT advisor_id FROM students WHERE id = ?");
+    $stmt->bind_param("i", $student_id);
+    $stmt->execute();
+    $student_result = $stmt->get_result()->fetch_assoc();
+    
+    if ($slot['professor_id'] != $student_result['advisor_id']) {
+        echo json_encode(['success' => false, 'message' => 'This is not your advisor\'s slot']);
+        return;
+    }
+    
+    // Check if student already has a booking for this slot
+    $stmt = $conn->prepare("SELECT id FROM student_appointments WHERE schedule_id = ? AND student_id = ? AND status != 'cancelled'");
+    $stmt->bind_param("ii", $slot_id, $student_id);
+    $stmt->execute();
+    if ($stmt->get_result()->num_rows > 0) {
+        echo json_encode(['success' => false, 'message' => 'You have already booked this slot']);
+        return;
+    }
+    
+    // Book the slot
+    $stmt = $conn->prepare("INSERT INTO student_appointments (schedule_id, student_id, status) VALUES (?, ?, 'pending')");
+    $stmt->bind_param("ii", $slot_id, $student_id);
+    
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Slot booked successfully']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to book slot']);
+    }
+}
+
+function cancelBooking() {
+    global $conn, $student_id;
+    
+    $appointment_id = $_POST['appointment_id'] ?? 0;
+    
+    // Verify this is the student's booking
+    $stmt = $conn->prepare("SELECT * FROM student_appointments WHERE id = ? AND student_id = ?");
+    $stmt->bind_param("ii", $appointment_id, $student_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows === 0) {
+        echo json_encode(['success' => false, 'message' => 'Booking not found']);
+        return;
+    }
+    
+    // Cancel the booking
+    $stmt = $conn->prepare("UPDATE student_appointments SET status = 'cancelled' WHERE id = ?");
+    $stmt->bind_param("i", $appointment_id);
+    
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Booking cancelled successfully']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to cancel booking']);
+    }
+}
+
+function getMyBookings() {
+    global $conn, $student_id;
+    
+    $stmt = $conn->prepare("
+        SELECT 
+            sa.id as appointment_id,
+            sa.status,
+            sa.notes,
+            sa.created_at as booked_at,
+            s.schedule_date,
+            s.start_time,
+            s.end_time,
+            s.location,
+            s.max_slots,
+            CONCAT(p.first_name, ' ', p.last_name) as adviser_name,
+            p.email as adviser_email,
+            (SELECT COUNT(*) FROM student_appointments sa2 
+             WHERE sa2.schedule_id = s.id AND sa2.status != 'cancelled') as booked_count
+        FROM student_appointments sa
+        JOIN advising_schedules s ON s.id = sa.schedule_id
+        JOIN professors p ON p.id = s.professor_id
+        WHERE sa.student_id = ?
+        AND sa.status != 'cancelled'
+        AND (
+            s.schedule_date > CURDATE() 
+            OR (s.schedule_date = CURDATE() AND s.start_time > CURTIME())
+        )
+        ORDER BY s.schedule_date ASC, s.start_time ASC
+    ");
+    $stmt->bind_param("i", $student_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $bookings = [];
+    while ($row = $result->fetch_assoc()) {
+        $bookings[] = $row;
+    }
+    
+    echo json_encode(['success' => true, 'bookings' => $bookings]);
+}
+
+// Get student info for HTML display
 $stmt = $conn->prepare("SELECT CONCAT(first_name, ' ', last_name) as name, advisor_id FROM students WHERE id = ?");
 $stmt->bind_param("i", $student_id);
 $stmt->execute();
@@ -103,8 +324,13 @@ $advisor_id = $result['advisor_id'];
         
         <main class="main-content">
             <div class="top-bar">
-                <h1>Meeting Schedule</h1>
-                <a href="login.php" class="logout-btn">Logout</a>
+                <div>
+                    <h1>Meeting Schedule</h1>
+                    <p style="color: #666; font-size: 14px; margin-top: 5px;">
+                        <span id="currentTime"></span>
+                    </p>
+                </div>
+                <a href="logout.php" class="logout-btn">Logout</a>
             </div>
             
             <?php if (!$advisor_id): ?>
@@ -152,7 +378,9 @@ $advisor_id = $result['advisor_id'];
         window.onload = function() {
             if (advisorId) {
                 loadAvailableSlots();
+                loadMyBookings();
             }
+            updateTime();
         };
 
         function switchTab(tab) {
@@ -175,7 +403,7 @@ $advisor_id = $result['advisor_id'];
             const container = document.getElementById('slotsContainer');
             container.innerHTML = '<div class="loading">Loading available slots...</div>';
             
-            fetch('student_meeting_api.php?action=get_available_slots')
+            fetch('student_meeting.php?action=get_available_slots')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -200,17 +428,17 @@ $advisor_id = $result['advisor_id'];
             // Group slots by date
             const groupedSlots = {};
             slots.forEach(slot => {
-                if (!groupedSlots[slot.available_date]) {
-                    groupedSlots[slot.available_date] = [];
+                if (!groupedSlots[slot.schedule_date]) {
+                    groupedSlots[slot.schedule_date] = [];
                 }
-                groupedSlots[slot.available_date].push(slot);
+                groupedSlots[slot.schedule_date].push(slot);
             });
             
             let html = '<div class="calendar-container">';
             
             Object.keys(groupedSlots).sort().forEach(date => {
                 const dateSlots = groupedSlots[date];
-                const hasAvailable = dateSlots.some(s => !s.is_booked);
+                const hasAvailable = dateSlots.some(s => !s.is_fully_booked);
                 
                 html += `
                     <div class="date-card ${hasAvailable ? 'has-slots' : ''}">
@@ -220,21 +448,24 @@ $advisor_id = $result['advisor_id'];
                 `;
                 
                 dateSlots.forEach(slot => {
-                    const isBooked = slot.is_booked == 1;
-                    const isMyBooking = slot.booked_by == <?php echo $student_id; ?>;
+                    const isFullyBooked = slot.is_fully_booked;
+                    const isMyBooking = slot.is_my_booking;
                     
                     html += `
-                        <div class="time-slot ${isBooked ? (isMyBooking ? 'my-booking' : 'booked') : ''}">
+                        <div class="time-slot ${isFullyBooked ? (isMyBooking ? 'my-booking' : 'booked') : ''}">
                             <div class="time-info">
-                                <div class="time-text">${formatTime(slot.available_time)}</div>
-                                ${isMyBooking ? '<div class="booking-status">Your booking</div>' : ''}
-                                ${isBooked && !isMyBooking ? '<div class="booking-status">Already booked</div>' : ''}
+                                <div class="time-text">${formatTime(slot.start_time)} - ${formatTime(slot.end_time)}</div>
+                                <div class="booking-status">
+                                    ${slot.location ? `📍 ${slot.location} • ` : ''}
+                                    ${slot.available_slots} of ${slot.max_slots} slots available
+                                </div>
+                                ${isMyBooking ? '<div class="booking-status" style="color: #28a745; font-weight: 600;">✓ You have booked this slot</div>' : ''}
                             </div>
-                            ${!isBooked ? 
+                            ${!isFullyBooked && !isMyBooking ? 
                                 `<button class="btn btn-primary" onclick="bookSlot(${slot.id})">Book</button>` : 
                                 isMyBooking ? 
-                                `<button class="btn btn-danger" onclick="cancelBooking(${slot.id})">Cancel</button>` : 
-                                `<button class="btn btn-disabled" disabled>Booked</button>`
+                                `<span class="badge success">Booked</span>` : 
+                                `<button class="btn btn-disabled" disabled>Full</button>`
                             }
                         </div>
                     `;
@@ -259,7 +490,7 @@ $advisor_id = $result['advisor_id'];
             formData.append('action', 'book_slot');
             formData.append('slot_id', slotId);
             
-            fetch('student_meeting_api.php', {
+            fetch('student_meeting.php', {
                 method: 'POST',
                 body: formData
             })
@@ -268,6 +499,7 @@ $advisor_id = $result['advisor_id'];
                 if (data.success) {
                     showAlert('Meeting slot booked successfully!', 'success');
                     loadAvailableSlots();
+                    loadMyBookings();
                 } else {
                     showAlert('Error: ' + data.message, 'danger');
                 }
@@ -277,16 +509,16 @@ $advisor_id = $result['advisor_id'];
             });
         }
 
-        function cancelBooking(slotId) {
+        function cancelBooking(appointmentId) {
             if (!confirm('Are you sure you want to cancel this booking?')) {
                 return;
             }
             
             const formData = new FormData();
             formData.append('action', 'cancel_booking');
-            formData.append('slot_id', slotId);
+            formData.append('appointment_id', appointmentId);
             
-            fetch('student_meeting_api.php', {
+            fetch('student_meeting.php', {
                 method: 'POST',
                 body: formData
             })
@@ -295,6 +527,7 @@ $advisor_id = $result['advisor_id'];
                 if (data.success) {
                     showAlert('Booking cancelled successfully', 'success');
                     loadAvailableSlots();
+                    loadMyBookings();
                 } else {
                     showAlert('Error: ' + data.message, 'danger');
                 }
@@ -308,7 +541,7 @@ $advisor_id = $result['advisor_id'];
             const container = document.getElementById('bookingsContainer');
             container.innerHTML = '<div class="loading">Loading your bookings...</div>';
             
-            fetch('student_meeting_api.php?action=get_my_bookings')
+            fetch('student_meeting.php?action=get_my_bookings')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -332,15 +565,25 @@ $advisor_id = $result['advisor_id'];
             
             let html = '';
             bookings.forEach(booking => {
+                const statusBadge = booking.status === 'confirmed' ? 
+                    '<span class="badge success">Confirmed</span>' : 
+                    '<span class="badge pending">Pending</span>';
+                
                 html += `
                     <div class="booking-card">
                         <div class="booking-header">
-                            <div class="booking-date">${formatDisplayDate(booking.available_date)}</div>
-                            <button class="btn btn-danger" onclick="cancelBooking(${booking.id})">Cancel</button>
+                            <div>
+                                <div class="booking-date">${formatDisplayDate(booking.schedule_date)}</div>
+                                ${statusBadge}
+                            </div>
+                            <button class="btn btn-danger" onclick="cancelBooking(${booking.appointment_id})">Cancel</button>
                         </div>
                         <div class="booking-details">
-                            <strong>Time:</strong> ${formatTime(booking.available_time)}<br>
-                            <strong>Adviser:</strong> ${booking.adviser_name}
+                            <strong>Time:</strong> ${formatTime(booking.start_time)} - ${formatTime(booking.end_time)}<br>
+                            <strong>Location:</strong> ${booking.location || 'TBA'}<br>
+                            <strong>Adviser:</strong> ${booking.adviser_name}<br>
+                            <strong>Email:</strong> ${booking.adviser_email}<br>
+                            <strong>Booked:</strong> ${booking.booked_count} of ${booking.max_slots} slots filled
                         </div>
                     </div>
                 `;
@@ -375,6 +618,26 @@ $advisor_id = $result['advisor_id'];
             const displayHour = hour % 12 || 12;
             return `${displayHour}:${minutes} ${ampm}`;
         }
+
+        // Update local time
+        function updateTime() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            };
+            const timeElement = document.getElementById('currentTime');
+            if (timeElement) {
+                timeElement.textContent = now.toLocaleString('en-US', options);
+            }
+        }
+        setInterval(updateTime, 1000);
     </script>
 </body>
 </html>
