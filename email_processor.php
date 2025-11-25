@@ -1,22 +1,21 @@
 <?php
 require_once 'config.php';
-require 'vendor/autoload.php'; // If using Composer for PHPMailer
+require_once __DIR__ . '/vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-// Email configuration - UPDATE THESE WITH YOUR SMTP SETTINGS
+// Email configuration - UPDATE WITH YOUR SETTINGS
 define('SMTP_HOST', 'smtp.gmail.com');
 define('SMTP_PORT', 587);
 define('SMTP_USERNAME', 'your-email@gmail.com');
 define('SMTP_PASSWORD', 'your-app-password');
 define('SMTP_FROM_EMAIL', 'your-email@gmail.com');
-define('SMTP_FROM_NAME', 'Academic Advising System');
+define('SMTP_FROM_NAME', 'DLSU Academic Advising');
 
 function sendQueuedEmails() {
     global $conn;
     
-    // Get pending emails from queue
     $stmt = $conn->prepare("
         SELECT 
             eq.*,
@@ -43,7 +42,6 @@ function sendQueuedEmails() {
         $mail = new PHPMailer(true);
         
         try {
-            // Server settings
             $mail->isSMTP();
             $mail->Host = SMTP_HOST;
             $mail->SMTPAuth = true;
@@ -52,12 +50,10 @@ function sendQueuedEmails() {
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port = SMTP_PORT;
             
-            // Recipients
             $mail->setFrom(SMTP_FROM_EMAIL, $email['professor_name'] . ' via ' . SMTP_FROM_NAME);
             $mail->addAddress($email['student_email'], $email['student_name']);
             $mail->addReplyTo($email['professor_email'], $email['professor_name']);
             
-            // Content
             $mail->isHTML(true);
             $mail->Subject = $email['subject'];
             $mail->Body = nl2br(htmlspecialchars($email['body']));
@@ -65,7 +61,6 @@ function sendQueuedEmails() {
             
             $mail->send();
             
-            // Update status to sent
             $update = $conn->prepare("UPDATE email_queue SET status = 'sent', sent_at = NOW() WHERE id = ?");
             $update->bind_param("i", $email['id']);
             $update->execute();
@@ -73,7 +68,6 @@ function sendQueuedEmails() {
             $sent_count++;
             
         } catch (Exception $e) {
-            // Update status to failed
             $update = $conn->prepare("UPDATE email_queue SET status = 'failed', error_message = ? WHERE id = ?");
             $error_msg = "Mailer Error: {$mail->ErrorInfo}";
             $update->bind_param("si", $error_msg, $email['id']);
@@ -84,25 +78,15 @@ function sendQueuedEmails() {
         }
     }
     
-    return [
-        'sent' => $sent_count,
-        'failed' => $failed_count
-    ];
+    return ['sent' => $sent_count, 'failed' => $failed_count];
 }
 
-// Run the processor
 if (php_sapi_name() === 'cli') {
-    // Running from command line
     $result = sendQueuedEmails();
     echo "Emails sent: {$result['sent']}, Failed: {$result['failed']}\n";
 } else {
-    // Running from web (for manual triggering or cron URL)
     header('Content-Type: application/json');
     $result = sendQueuedEmails();
-    echo json_encode([
-        'success' => true,
-        'sent' => $result['sent'],
-        'failed' => $result['failed']
-    ]);
+    echo json_encode(['success' => true, 'sent' => $result['sent'], 'failed' => $result['failed']]);
 }
 ?>
