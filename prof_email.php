@@ -46,6 +46,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     case 'get_sent_emails':
         getSentEmails();
         break;
+    case 'process_emails':
+        processEmails();
+        break;
     default:
         echo json_encode(['success' => false, 'message' => 'Invalid action']);
     }
@@ -149,6 +152,77 @@ function getSentEmails() {
         $emails[] = $row;
     }
     echo json_encode(['success' => true, 'emails' => $emails]);
+}
+
+function processEmails() {
+    global $conn, $professor_id;
+    
+    // Get pending emails from this professor
+    $stmt = $conn->prepare("
+        SELECT 
+            eq.*,
+            s.email as student_email,
+            CONCAT(s.first_name, ' ', s.last_name) as student_name,
+            CONCAT(p.first_name, ' ', p.last_name) as professor_name,
+            p.email as professor_email
+        FROM email_queue eq
+        JOIN students s ON s.id = eq.to_student_id
+        JOIN professors p ON p.id = eq.from_professor_id
+        WHERE eq.status = 'pending' AND eq.from_professor_id = ?
+        ORDER BY eq.created_at ASC
+        LIMIT 50
+    ");
+    
+    $stmt->bind_param("i", $professor_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $sent_count = 0;
+    $failed_count = 0;
+    
+    while ($email = $result->fetch_assoc()) {
+        try {
+            // Prepare email headers
+            $headers = "From: " . $email['professor_name'] . " <advising@dlsu.edu.ph>\r\n";
+            $headers .= "Reply-To: " . $email['professor_email'] . "\r\n";
+            $headers .= "X-Mailer: PHP/" . phpversion() . "\r\n";
+            $headers .= "MIME-Version: 1.0\r\n";
+            $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+            
+            // Send email
+            $success = mail(
+                $email['student_email'],
+                $email['subject'],
+                $email['body'],
+                $headers
+            );
+            
+            if ($success) {
+                // Update status to sent
+                $update = $conn->prepare("UPDATE email_queue SET status = 'sent', sent_at = NOW() WHERE id = ?");
+                $update->bind_param("i", $email['id']);
+                $update->execute();
+                $sent_count++;
+            } else {
+                throw new Exception("mail() function returned false");
+            }
+            
+        } catch (Exception $e) {
+            // Update status to failed
+            $update = $conn->prepare("UPDATE email_queue SET status = 'failed', error_message = ? WHERE id = ?");
+            $error_msg = $e->getMessage();
+            $update->bind_param("si", $error_msg, $email['id']);
+            $update->execute();
+            $failed_count++;
+        }
+    }
+    
+    echo json_encode([
+        'success' => true,
+        'sent' => $sent_count,
+        'failed' => $failed_count,
+        'message' => "Sent: $sent_count, Failed: $failed_count"
+    ]);
 }
 
 // Get professor info for HTML display
@@ -356,6 +430,10 @@ $professor_name = $professor['full_name'];
                 
                 <!-- Sent Emails Tab -->
                 <div id="sent-tab" class="tab-content">
+                    <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                        <button type="button" class="btn-primary" onclick="processQueuedEmails()">Process Pending Emails</button>
+                        <button type="button" class="btn-secondary" onclick="loadSentEmails()">Refresh</button>
+                    </div>
                     <div class="table-container">
                         <table class="data-table">
                             <thead>
@@ -598,6 +676,24 @@ $professor_name = $professor['full_name'];
                     </tr>
                 `).join('');
             }
+        });
+    }
+
+    function processQueuedEmails() {
+        if (!confirm('Process all pending emails now? This will send all queued emails from you.')) return;
+        
+        fetch('prof_email.php?action=process_emails')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                loadSentEmails();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error processing emails: ' + error);
         });
     }
     </script>
