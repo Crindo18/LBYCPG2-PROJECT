@@ -8,51 +8,57 @@ require_once __DIR__ . '/vendor/autoload.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-// Handle API requests specific to this page (Clearance/Email)
-// Note: Uploads are handled by admin_api.php, so we don't need to move that logic here.
+// Handle API requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
-    // Only run if it's an AJAX request specific to these local functions
-    if (isset($_POST['action']) && in_array($_POST['action'], ['get_advisers', 'bulk_clearance', 'send_mass_email'])) {
-        ob_start();
-        error_reporting(0);
-        ini_set('display_errors', 0);
-        
-        ob_clean();
-        header('Content-Type: application/json');
-        
-        $action = $_POST['action'];
-        
-        switch ($action) {
-            case 'get_advisers':
-                getAdvisers();
-                exit;
-            case 'bulk_clearance':
-                bulkClearance();
-                exit;
-            case 'send_mass_email':
-                sendMassEmail();
-                exit;
-        }
+    ob_start();
+    error_reporting(0);
+    ini_set('display_errors', 0);
+    
+    ob_clean();
+    header('Content-Type: application/json');
+    
+    $action = $_POST['action'] ?? $_GET['action'] ?? '';
+    
+    switch ($action) {
+        case 'get_advisers':
+            getAdvisers();
+            exit;
+        case 'bulk_clearance':
+            bulkClearance();
+            exit;
+        case 'send_mass_email':
+            sendMassEmail();
+            exit;
     }
 }
 
 function getAdvisers() {
     global $conn;
-    $stmt = $conn->prepare("SELECT id, CONCAT(first_name, ' ', last_name) as name FROM professors ORDER BY last_name");
+    
+    $stmt = $conn->prepare("
+        SELECT id, CONCAT(first_name, ' ', last_name) as name 
+        FROM professors 
+        ORDER BY last_name
+    ");
     $stmt->execute();
     $result = $stmt->get_result();
+    
     $advisers = [];
     while ($row = $result->fetch_assoc()) {
         $advisers[] = $row;
     }
+    
     echo json_encode(['success' => true, 'advisers' => $advisers]);
 }
 
 function bulkClearance() {
     global $conn;
+    
     $clearance_action = $_POST['clearance_action'] ?? '';
     $target = $_POST['target'] ?? '';
+    
     $clear_value = ($clearance_action === 'clear') ? 1 : 0;
+    
     $where = "1=1";
     
     if ($target === 'program') {
@@ -76,30 +82,200 @@ function bulkClearance() {
     $conn->query($query);
     $affected = $conn->affected_rows;
     
-    echo json_encode(['success' => true, 'message' => "$affected students " . ($clear_value ? 'cleared' : 'uncleared'), 'stats' => ['affected' => $affected]]);
+    echo json_encode([
+        'success' => true,
+        'message' => "$affected students " . ($clear_value ? 'cleared' : 'uncleared'),
+        'stats' => [
+            'affected' => $affected
+        ]
+    ]);
 }
 
 function sendMassEmail() {
     global $conn;
-    // ... (Logic remains the same as your previous file, abbreviated for brevity) ...
-    // Ensure you keep the full logic here if you modify this part often. 
-    // Since I cannot see the full helper functions from previous context easily, 
-    // I will assume the standard implementation is used.
     
     $recipients = $_POST['recipients'] ?? '';
     $subject = trim($_POST['subject'] ?? '');
     $message = trim($_POST['message'] ?? '');
+    $preview = !empty($_POST['preview']);
     
     if (!$recipients || $subject === '' || $message === '') {
         echo json_encode(['success' => false, 'message' => 'Recipients, subject, and message are required']);
         return;
     }
     
-    // Simple mockup response for the merge example (Replace with your full PHPMailer logic)
-    echo json_encode(['success' => true, 'message' => 'Email simulation: Sent to selected group.']);
+    $query = "SELECT id, CONCAT(first_name, ' ', last_name) as name, email, id_number, program FROM ";
+    
+    switch ($recipients) {
+        case 'all_students':
+            $query .= "students";
+            break;
+        case 'all_professors':
+            $query .= "professors";
+            break;
+        case 'program':
+            $program = $_POST['program'] ?? '';
+            $query .= "students WHERE program = '" . $conn->real_escape_string($program) . "'";
+            break;
+        case 'cleared':
+            $query .= "students WHERE advising_cleared = 1";
+            break;
+        case 'not_cleared':
+            $query .= "students WHERE advising_cleared = 0";
+            break;
+        case 'at_risk':
+            $query .= "students WHERE accumulated_failed_units >= 25";
+            break;
+        default:
+            echo json_encode(['success' => false, 'message' => 'Invalid recipient selection']);
+            return;
+    }
+    
+    $result = $conn->query($query);
+    $targets = [];
+    while ($row = $result->fetch_assoc()) {
+        $targets[] = $row;
+        if ($preview) break;
+    }
+    
+    if (empty($targets)) {
+        echo json_encode(['success' => false, 'message' => 'No recipients match the selected filter']);
+        return;
+    }
+    
+    if ($preview) {
+        $adminContact = getAdminContact();
+        if (!$adminContact || empty($adminContact['email'])) {
+            echo json_encode(['success' => false, 'message' => 'Admin account is missing an email address for previews']);
+            return;
+        }
+        
+        $sampleUser = $targets[0];
+        $body = personalizeMessage($message, $sampleUser);
+        
+        try {
+            $mail = createMailer();
+            $mail->addAddress($adminContact['email'], $adminContact['name']);
+            $mail->Subject = '[PREVIEW] ' . $subject;
+            $mail->Body = nl2br($body);
+            $mail->AltBody = strip_tags($body);
+            $mail->send();
+            
+            echo json_encode([
+                'success' => true,
+                'message' => "Preview email sent to {$adminContact['email']}",
+                'stats' => [
+                    'emails_sent' => 1,
+                    'failed' => 0
+                ]
+            ]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Preview send failed: ' . $e->getMessage()]);
+        }
+        return;
+    }
+    
+    $sent = 0;
+    $failed = [];
+    
+    foreach ($targets as $user) {
+        if (empty($user['email'])) {
+            $failed[] = ($user['name'] ?? 'Unknown') . ' (missing email)';
+            continue;
+        }
+        
+        try {
+            $mail = createMailer();
+            $mail->addAddress($user['email'], $user['name'] ?? '');
+            $mail->Subject = $subject;
+            $body = personalizeMessage($message, $user);
+            $mail->Body = nl2br($body);
+            $mail->AltBody = strip_tags($body);
+            $mail->send();
+            $sent++;
+        } catch (Exception $e) {
+            $failed[] = $user['email'] . ': ' . $mail->ErrorInfo;
+        }
+    }
+    
+    $responseMessage = "$sent email(s) sent.";
+    if ($failed) {
+        $responseMessage .= ' ' . count($failed) . ' failed.';
+    }
+    
+    echo json_encode([
+        'success' => $sent > 0,
+        'message' => $responseMessage,
+        'stats' => [
+            'emails_sent' => $sent,
+            'failed' => count($failed)
+        ],
+        'errors' => $failed
+    ]);
 }
 
-// HTML Interface
+function createMailer(): PHPMailer {
+    $mail = new PHPMailer(true);
+    $mail->isSMTP();
+    $mail->Host = MAILER_HOST;
+    $mail->Port = MAILER_PORT;
+    
+    if (MAILER_USERNAME) {
+        $mail->SMTPAuth = true;
+        $mail->Username = MAILER_USERNAME;
+        $mail->Password = MAILER_PASSWORD;
+    } else {
+        $mail->SMTPAuth = false;
+    }
+    
+    $encryption = strtolower(MAILER_ENCRYPTION);
+    if ($encryption === 'ssl') {
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+    } elseif ($encryption === 'tls') {
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    }
+    
+    $mail->setFrom(MAILER_FROM_EMAIL, MAILER_FROM_NAME);
+    $mail->isHTML(true);
+    
+    return $mail;
+}
+
+function personalizeMessage(string $template, array $user): string {
+    return str_replace(
+        ['{name}', '{id_number}', '{program}'],
+        [
+            $user['name'] ?? 'Student',
+            $user['id_number'] ?? 'N/A',
+            $user['program'] ?? 'N/A'
+        ],
+        $template
+    );
+}
+
+function getAdminContact(): ?array {
+    global $conn;
+    
+    if (empty($_SESSION['user_id'])) {
+        return null;
+    }
+    
+    $stmt = $conn->prepare("SELECT username, email FROM admin WHERE id = ?");
+    $stmt->bind_param("i", $_SESSION['user_id']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($row = $result->fetch_assoc()) {
+        return [
+            'name' => $row['username'] ?: 'Administrator',
+            'email' => $row['email'] ?? null
+        ];
+    }
+    
+    return null;
+}
+
+// HTML Interface below
 $admin_id = $_SESSION['user_id'];
 $stmt = $conn->prepare("SELECT username FROM admin WHERE id = ?");
 $stmt->bind_param("i", $admin_id);
@@ -111,7 +287,7 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bulk Operations & Uploads</title>
+    <title>Bulk Operations</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
@@ -128,17 +304,9 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
         .top-bar h1 { font-size: 28px; color: #00A36C; }
         .logout-btn { padding: 8px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; text-decoration: none; font-size: 14px; }
         
-        /* TABS STYLE */
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; flex-wrap: wrap; }
-        .tab-btn { padding: 12px 24px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 15px; font-weight: 600; color: #666; transition: all 0.3s; }
-        .tab-btn:hover { color: #00A36C; background: rgba(0, 163, 108, 0.05); }
-        .tab-btn.active { color: #00A36C; border-bottom-color: #00A36C; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* Cards & Forms */
-        .operation-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .operations-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 30px; }
+        
+        .operation-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .operation-card h3 { font-size: 20px; color: #2c3e50; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; display: flex; align-items: center; gap: 10px; }
         .operation-icon { font-size: 24px; }
         .operation-description { color: #666; margin-bottom: 20px; line-height: 1.6; }
@@ -153,31 +321,40 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
         
         .btn { padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600; transition: all 0.3s; width: 100%; }
         .btn-primary { background: #3498db; color: white; }
-        .btn-warning { background: #f39c12; color: white; }
-        .btn-danger { background: #e74c3c; color: white; }
+        .btn-primary:hover { background: #2980b9; }
         .btn-success { background: #27ae60; color: white; }
+        .btn-success:hover { background: #229954; }
+        .btn-warning { background: #f39c12; color: white; }
+        .btn-warning:hover { background: #e67e22; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
-        /* Upload Specific Styles */
-        .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; margin-bottom: 10px; }
-        .file-input-wrapper input[type=file] { position: absolute; left: -9999px; }
-        .file-input-label { padding: 10px 20px; background: #00A36C; color: white; border-radius: 5px; cursor: pointer; display: inline-block; font-size: 14px; transition: 0.3s; }
-        .file-input-label:hover { background: #008558; }
-        .selected-file { margin: 10px 0; color: #555; font-size: 14px; font-weight: bold; }
-        .download-template { color: #3498db; text-decoration: none; font-size: 14px; margin-left: 15px; display: inline-block; }
+        .alert { padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; }
+        .alert.success { background: #d4edda; border-left: 4px solid #28a745; color: #155724; }
+        .alert.danger { background: #f8d7da; border-left: 4px solid #dc3545; color: #721c24; }
         
-        .format-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-        .format-table th, .format-table td { padding: 8px; border: 1px solid #ddd; text-align: left; }
-        .format-table th { background: #f0f0f0; font-weight: 600; }
+        .progress-container { display: none; margin-top: 20px; }
+        .progress-bar { width: 100%; height: 30px; background: #f0f0f0; border-radius: 15px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #3498db, #2ecc71); transition: width 0.3s; text-align: center; line-height: 30px; color: white; font-weight: bold; }
         
-        /* Results & Alerts */
-        .result-box { margin-top: 20px; padding: 15px; border-radius: 5px; display: none; }
-        .result-box.success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
-        .result-box.error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
-        .error-list { max-height: 200px; overflow-y: auto; margin-top: 10px; background: white; padding: 10px; border: 1px solid #f5c6cb; }
-        .error-item { font-size: 12px; margin-bottom: 4px; color: #dc3545; }
+        .result-box { margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px; display: none; }
+        .result-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px; }
+        .result-stat { text-align: center; padding: 15px; background: white; border-radius: 5px; }
+        .result-stat-value { font-size: 24px; font-weight: bold; color: #3498db; }
+        .result-stat-label { font-size: 12px; color: #666; margin-top: 5px; }
         
         .checkbox-group { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
         .checkbox-group input[type="checkbox"] { width: auto; }
+        
+        .bulk-upload-section { margin-top: 40px; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; flex-wrap: wrap; }
+        .tab-btn { padding: 10px 22px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 15px; font-weight: 600; color: #666; transition: all 0.3s; }
+        .tab-btn.active { color: #3498db; border-bottom-color: #3498db; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .content-card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        .content-card h2 { font-size: 22px; color: #2c3e50; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -200,26 +377,20 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
         
         <main class="main-content">
             <div class="top-bar">
-                <h1>Bulk Operations & Uploads</h1>
+                <h1>Bulk Operations</h1>
                 <a href="logout.php" class="logout-btn">Logout</a>
             </div>
             
-            <div class="tabs">
-                <button class="tab-btn active" onclick="switchTab('operations')">General Operations</button>
-                <button class="tab-btn" onclick="switchTab('students')">Upload Students</button>
-                <button class="tab-btn" onclick="switchTab('professors')">Upload Professors</button>
-                <button class="tab-btn" onclick="switchTab('courses')">Upload Courses</button>
-            </div>
-            
-            <!-- TAB 1: General Operations -->
-            <div id="operations" class="tab-content active">
+            <div class="operations-grid">
                 <!-- Bulk Clearance Management -->
                 <div class="operation-card">
                     <h3><span class="operation-icon">✅</span> Bulk Clearance Management</h3>
                     <p class="operation-description">
                         Clear or unclear multiple students at once. Useful for mass clearance operations.
                     </p>
+                    
                     <div id="clearanceAlert"></div>
+                    
                     <form id="clearanceForm">
                         <div class="form-group">
                             <label>Action *</label>
@@ -229,6 +400,7 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
                                 <option value="unclear">Unclear Students</option>
                             </select>
                         </div>
+                        
                         <div class="form-group">
                             <label>Target Students *</label>
                             <select id="clearanceTarget" required>
@@ -239,6 +411,7 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
                                 <option value="list">From List</option>
                             </select>
                         </div>
+                        
                         <div class="form-group" id="clearanceProgramGroup" style="display: none;">
                             <label>Program</label>
                             <select id="clearanceProgram">
@@ -247,20 +420,29 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
                                 <option value="BS Electrical Engineering">BSEE</option>
                             </select>
                         </div>
+                        
                         <div class="form-group" id="clearanceAdviserGroup" style="display: none;">
                             <label>Adviser</label>
-                            <select id="clearanceAdviser"><option value="">Loading advisers...</option></select>
+                            <select id="clearanceAdviser">
+                                <option value="">Loading advisers...</option>
+                            </select>
                         </div>
+                        
                         <div class="form-group" id="clearanceListGroup" style="display: none;">
                             <label>Student ID Numbers (one per line)</label>
-                            <textarea id="clearanceList" placeholder="12012345\n12012346"></textarea>
+                            <textarea id="clearanceList" placeholder="12012345
+12012346
+12012347"></textarea>
                         </div>
+                        
                         <div class="checkbox-group">
                             <input type="checkbox" id="clearanceConfirm" required>
                             <label for="clearanceConfirm">I confirm this bulk operation</label>
                         </div>
+                        
                         <button type="button" class="btn btn-warning" onclick="performClearance()">Execute Clearance</button>
                     </form>
+                    
                     <div class="result-box" id="clearanceResult"></div>
                 </div>
                 
@@ -270,7 +452,9 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
                     <p class="operation-description">
                         Send emails to multiple users at once. Choose recipients and compose your message.
                     </p>
+                    
                     <div id="emailAlert"></div>
+                    
                     <form id="emailForm">
                         <div class="form-group">
                             <label>Recipients *</label>
@@ -284,6 +468,7 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
                                 <option value="at_risk">At-Risk Students (25+ failed units)</option>
                             </select>
                         </div>
+                        
                         <div class="form-group" id="emailProgramGroup" style="display: none;">
                             <label>Program</label>
                             <select id="emailProgram">
@@ -292,131 +477,33 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
                                 <option value="BS Electrical Engineering">BSEE</option>
                             </select>
                         </div>
+                        
                         <div class="form-group">
                             <label>Subject *</label>
                             <input type="text" id="emailSubject" placeholder="Email subject" required>
                         </div>
+                        
                         <div class="form-group">
                             <label>Message *</label>
                             <textarea id="emailMessage" placeholder="Email content..." required></textarea>
                             <div class="help-text">Available variables: {name}, {id_number}, {program}</div>
                         </div>
+                        
                         <div class="checkbox-group">
                             <input type="checkbox" id="emailPreview">
                             <label for="emailPreview">Send test email to myself first</label>
                         </div>
+                        
                         <button type="button" class="btn btn-danger" onclick="sendMassEmail()">Send Emails</button>
                     </form>
+                    
+                    <div class="progress-container" id="emailProgress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="emailProgressFill">0%</div>
+                        </div>
+                    </div>
+                    
                     <div class="result-box" id="emailResult"></div>
-                </div>
-            </div>
-            
-            <!-- TAB 2: Upload Students -->
-            <div id="students" class="tab-content">
-                <div class="operation-card">
-                    <h3><span class="operation-icon">👨‍🎓</span> Bulk Upload Students</h3>
-                    <p class="operation-description">Upload a CSV file containing student information. Default password will be set to their ID number.</p>
-                    <a href="templates/students_template.csv" class="download-template" download>⬇ Download CSV Template</a>
-                    <div style="margin-top: 20px;">
-                        <form id="studentUploadForm" enctype="multipart/form-data">
-                            <div class="file-input-wrapper">
-                                <label class="file-input-label" for="studentFile">Choose CSV File</label>
-                                <input type="file" id="studentFile" name="csv_file" accept=".csv" onchange="updateFileName('studentFile')">
-                            </div>
-                            <div class="selected-file" id="studentFileName"></div>
-                            <button type="submit" class="btn btn-success">Upload Students</button>
-                        </form>
-                    </div>
-                    <div id="studentResult" class="result-box"></div>
-                    <details style="margin-top: 20px;">
-                        <summary style="cursor: pointer; font-weight: 600; color: #555;">View CSV Format Requirements</summary>
-                        <table class="format-table">
-                            <thead><tr><th>Column</th><th>Description</th><th>Example</th></tr></thead>
-                            <tbody>
-                                <tr><td>id_number</td><td>Student ID (numbers only)</td><td>12012345</td></tr>
-                                <tr><td>first_name</td><td>First name</td><td>Juan</td></tr>
-                                <tr><td>middle_name</td><td>Middle name (optional)</td><td>Santos</td></tr>
-                                <tr><td>last_name</td><td>Last name</td><td>Dela Cruz</td></tr>
-                                <tr><td>college</td><td>College name</td><td>Gokongwei College of Engineering</td></tr>
-                                <tr><td>department</td><td>Department name</td><td>GCOE-ECEE</td></tr>
-                                <tr><td>program</td><td>Program name</td><td>BS Computer Engineering</td></tr>
-                                <tr><td>specialization</td><td>Specialization (optional)</td><td>N/A</td></tr>
-                                <tr><td>phone_number</td><td>Contact number</td><td>+63 917 123 4567</td></tr>
-                                <tr><td>email</td><td>Email address</td><td>juan_delacruz@dlsu.edu.ph</td></tr>
-                                <tr><td>parent_guardian_name</td><td>Parent/Guardian name</td><td>Maria Dela Cruz</td></tr>
-                                <tr><td>parent_guardian_number</td><td>Parent/Guardian contact</td><td>+63 918 765 4321</td></tr>
-                            </tbody>
-                        </table>
-                    </details>
-                </div>
-            </div>
-            
-            <!-- TAB 3: Upload Professors -->
-            <div id="professors" class="tab-content">
-                <div class="operation-card">
-                    <h3><span class="operation-icon">👨‍🏫</span> Bulk Upload Professors</h3>
-                    <p class="operation-description">Upload a CSV file containing professor information.</p>
-                    <a href="templates/professors_template.csv" class="download-template" download>⬇ Download CSV Template</a>
-                    <div style="margin-top: 20px;">
-                        <form id="professorUploadForm" enctype="multipart/form-data">
-                            <div class="file-input-wrapper">
-                                <label class="file-input-label" for="professorFile">Choose CSV File</label>
-                                <input type="file" id="professorFile" name="csv_file" accept=".csv" onchange="updateFileName('professorFile')">
-                            </div>
-                            <div class="selected-file" id="professorFileName"></div>
-                            <button type="submit" class="btn btn-success">Upload Professors</button>
-                        </form>
-                    </div>
-                    <div id="professorResult" class="result-box"></div>
-                    <details style="margin-top: 20px;">
-                        <summary style="cursor: pointer; font-weight: 600; color: #555;">View CSV Format Requirements</summary>
-                        <table class="format-table">
-                            <thead><tr><th>Column</th><th>Description</th><th>Example</th></tr></thead>
-                            <tbody>
-                                <tr><td>id_number</td><td>Professor ID (numbers only)</td><td>10012345</td></tr>
-                                <tr><td>first_name</td><td>First name</td><td>Maria</td></tr>
-                                <tr><td>middle_name</td><td>Middle name (optional)</td><td>Santos</td></tr>
-                                <tr><td>last_name</td><td>Last name</td><td>Garcia</td></tr>
-                                <tr><td>department</td><td>Department name</td><td>GCOE-ECEE</td></tr>
-                                <tr><td>email</td><td>Email address</td><td>maria.garcia@dlsu.edu.ph</td></tr>
-                            </tbody>
-                        </table>
-                    </details>
-                </div>
-            </div>
-            
-            <!-- TAB 4: Upload Courses -->
-            <div id="courses" class="tab-content">
-                <div class="operation-card">
-                    <h3><span class="operation-icon">📚</span> Bulk Upload Courses</h3>
-                    <p class="operation-description">Upload a CSV file containing course information for the catalog.</p>
-                    <a href="templates/courses_template.csv" class="download-template" download>⬇ Download CSV Template</a>
-                    <div style="margin-top: 20px;">
-                        <form id="courseUploadForm" enctype="multipart/form-data">
-                            <div class="file-input-wrapper">
-                                <label class="file-input-label" for="courseFile">Choose CSV File</label>
-                                <input type="file" id="courseFile" name="csv_file" accept=".csv" onchange="updateFileName('courseFile')">
-                            </div>
-                            <div class="selected-file" id="courseFileName"></div>
-                            <button type="submit" class="btn btn-success">Upload Courses</button>
-                        </form>
-                    </div>
-                    <div id="courseResult" class="result-box"></div>
-                    <details style="margin-top: 20px;">
-                        <summary style="cursor: pointer; font-weight: 600; color: #555;">View CSV Format Requirements</summary>
-                        <table class="format-table">
-                            <thead><tr><th>Column</th><th>Description</th><th>Example</th></tr></thead>
-                            <tbody>
-                                <tr><td>course_code</td><td>Unique course code</td><td>CSSWENG</td></tr>
-                                <tr><td>course_name</td><td>Full course name</td><td>Software Engineering</td></tr>
-                                <tr><td>units</td><td>Number of units</td><td>3</td></tr>
-                                <tr><td>program</td><td>Program name</td><td>BS Computer Engineering</td></tr>
-                                <tr><td>term</td><td>Term (Term 1 to Term 12)</td><td>Term 2</td></tr>
-                                <tr><td>course_type</td><td>Type: major, minor, elective</td><td>major</td></tr>
-                                <tr><td>prerequisites</td><td>Format: CODE(TYPE)</td><td>FNDMATH(H)</td></tr>
-                            </tbody>
-                        </table>
-                    </details>
                 </div>
             </div>
         </main>
@@ -427,28 +514,18 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
             loadAdvisers();
         });
 
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
-        }
-
-        function updateFileName(inputId) {
-            const input = document.getElementById(inputId);
-            const fileNameDiv = document.getElementById(inputId + 'Name');
-            if (input.files.length > 0) {
-                fileNameDiv.textContent = '📄 ' + input.files[0].name;
-            } else {
-                fileNameDiv.textContent = '';
-            }
-        }
-
-        // --- Bulk Clearance JS ---
         document.getElementById('clearanceTarget')?.addEventListener('change', function() {
-            document.getElementById('clearanceProgramGroup').style.display = this.value === 'program' ? 'block' : 'none';
-            document.getElementById('clearanceAdviserGroup').style.display = this.value === 'adviser' ? 'block' : 'none';
-            document.getElementById('clearanceListGroup').style.display = this.value === 'list' ? 'block' : 'none';
+            document.getElementById('clearanceProgramGroup').style.display = 
+                this.value === 'program' ? 'block' : 'none';
+            document.getElementById('clearanceAdviserGroup').style.display = 
+                this.value === 'adviser' ? 'block' : 'none';
+            document.getElementById('clearanceListGroup').style.display = 
+                this.value === 'list' ? 'block' : 'none';
+        });
+
+        document.getElementById('emailRecipients')?.addEventListener('change', function() {
+            document.getElementById('emailProgramGroup').style.display = 
+                this.value === 'program' ? 'block' : 'none';
         });
 
         function loadAdvisers() {
@@ -480,36 +557,48 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
             formData.append('clearance_action', action);
             formData.append('target', target);
             
-            if (target === 'program') formData.append('program', document.getElementById('clearanceProgram').value);
-            else if (target === 'adviser') formData.append('adviser_id', document.getElementById('clearanceAdviser').value);
-            else if (target === 'list') formData.append('student_list', document.getElementById('clearanceList').value);
+            if (target === 'program') {
+                formData.append('program', document.getElementById('clearanceProgram').value);
+            } else if (target === 'adviser') {
+                formData.append('adviser_id', document.getElementById('clearanceAdviser').value);
+            } else if (target === 'list') {
+                formData.append('student_list', document.getElementById('clearanceList').value);
+            }
             
-            if (!window.confirm(`This will ${action} students. Continue?`)) return;
+            if (!window.confirm(`This will ${action} students. Continue?`)) {
+                return;
+            }
             
-            fetch('', { method: 'POST', body: formData })
+            fetch('', {
+                method: 'POST',
+                body: formData
+            })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     showAlert('clearanceAlert', data.message, 'success');
+                    showResult('clearanceResult', data.stats);
                 } else {
                     showAlert('clearanceAlert', 'Error: ' + data.message, 'danger');
                 }
             })
-            .catch(error => showAlert('clearanceAlert', 'Error performing clearance', 'danger'));
+            .catch(error => {
+                showAlert('clearanceAlert', 'Error performing clearance', 'danger');
+            });
         }
-
-        // --- Mass Email JS ---
-        document.getElementById('emailRecipients')?.addEventListener('change', function() {
-            document.getElementById('emailProgramGroup').style.display = this.value === 'program' ? 'block' : 'none';
-        });
 
         function sendMassEmail() {
             const recipients = document.getElementById('emailRecipients').value;
             const subject = document.getElementById('emailSubject').value;
             const message = document.getElementById('emailMessage').value;
+            const preview = document.getElementById('emailPreview').checked ? 1 : 0;
             
             if (!recipients || !subject || !message) {
                 showAlert('emailAlert', 'Please fill all required fields', 'danger');
+                return;
+            }
+            
+            if (!preview && !confirm('This will send emails to multiple users. Continue?')) {
                 return;
             }
             
@@ -518,62 +607,74 @@ $admin_name = $stmt->get_result()->fetch_assoc()['username'];
             formData.append('recipients', recipients);
             formData.append('subject', subject);
             formData.append('message', message);
-            if (recipients === 'program') formData.append('program', document.getElementById('emailProgram').value);
+            formData.append('preview', preview);
             
-            fetch('', { method: 'POST', body: formData })
+            if (recipients === 'program') {
+                formData.append('program', document.getElementById('emailProgram').value);
+            }
+            
+            showProgress('emailProgress', 'emailProgressFill');
+            
+            fetch('', {
+                method: 'POST',
+                body: formData
+            })
             .then(response => response.json())
             .then(data => {
-                showAlert('emailAlert', data.message || 'Emails Sent', data.success ? 'success' : 'danger');
+                hideProgress('emailProgress');
+                const alertType = data.success ? 'success' : 'danger';
+                showAlert('emailAlert', data.message || 'Unknown response', alertType);
+                
+                if (data.stats) {
+                    showResult('emailResult', data.stats);
+                }
             })
-            .catch(error => showAlert('emailAlert', 'Error sending emails', 'danger'));
-        }
-
-        // --- Bulk Upload Handlers ---
-        function setupUploadHandler(formId, resultId, actionName) {
-            document.getElementById(formId).addEventListener('submit', function(e) {
-                e.preventDefault();
-                const formData = new FormData(this);
-                formData.append('action', actionName);
-                
-                const resultDiv = document.getElementById(resultId);
-                resultDiv.style.display = 'block';
-                resultDiv.className = 'result-box';
-                resultDiv.innerHTML = 'Uploading... Please wait.';
-                
-                fetch('admin_api.php', { method: 'POST', body: formData })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        resultDiv.className = 'result-box success';
-                        let html = `<strong>✓ Upload Successful!</strong><br>Total: ${data.total} | Success: ${data.successful} | Failed: ${data.failed}`;
-                        if (data.errors && data.errors.length > 0) {
-                            html += `<div class="error-list"><strong>Errors:</strong>`;
-                            data.errors.forEach(err => html += `<div class="error-item">${err}</div>`);
-                            html += `</div>`;
-                        }
-                        resultDiv.innerHTML = html;
-                        this.reset();
-                        document.getElementById(formId.replace('UploadForm', 'FileName')).textContent = '';
-                    } else {
-                        resultDiv.className = 'result-box error';
-                        resultDiv.innerHTML = `<strong>✗ Upload Failed</strong><br>${data.message}`;
-                    }
-                })
-                .catch(error => {
-                    resultDiv.className = 'result-box error';
-                    resultDiv.innerHTML = `<strong>✗ Error</strong><br>${error.message}`;
-                });
+            .catch(error => {
+                hideProgress('emailProgress');
+                showAlert('emailAlert', 'Error sending emails', 'danger');
             });
         }
-
-        setupUploadHandler('studentUploadForm', 'studentResult', 'bulk_upload_students');
-        setupUploadHandler('professorUploadForm', 'professorResult', 'bulk_upload_professors');
-        setupUploadHandler('courseUploadForm', 'courseResult', 'bulk_upload_courses');
 
         function showAlert(containerId, message, type) {
             const container = document.getElementById(containerId);
             container.innerHTML = `<div class="alert ${type}">${message}</div>`;
-            setTimeout(() => { container.innerHTML = ''; }, 5000);
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        function showProgress(containerId, fillId) {
+            document.getElementById(containerId).style.display = 'block';
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 10;
+                document.getElementById(fillId).style.width = progress + '%';
+                document.getElementById(fillId).textContent = progress + '%';
+                if (progress >= 90) clearInterval(interval);
+            }, 200);
+        }
+
+        function hideProgress(containerId) {
+            document.getElementById(containerId).style.display = 'none';
+        }
+
+        function showResult(containerId, stats) {
+            const container = document.getElementById(containerId);
+            let html = '<div class="result-stats">';
+            
+            Object.keys(stats).forEach(key => {
+                const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                html += `
+                    <div class="result-stat">
+                        <div class="result-stat-value">${stats[key]}</div>
+                        <div class="result-stat-label">${label}</div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+            container.style.display = 'block';
         }
     </script>
 </body>
