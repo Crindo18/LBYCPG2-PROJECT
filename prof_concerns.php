@@ -194,8 +194,8 @@ $professor_name = $stmt->get_result()->fetch_assoc()['full_name'];
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
         .container { display: flex; min-height: 100vh; }
         .sidebar { width: 260px; background: #00A36C; color: white; position: fixed; height: 100vh; overflow-y: auto; }
-        .sidebar-header { padding: 25px 20px; background: #00C97F; }
-        .sidebar-header h2 { font-size: 18px; margin-bottom: 5px; }
+        .sidebar-header { padding: 25px 20px; background: #00C97F; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .sidebar-header h2 { font-size: 18px; margin-bottom: 5px; font-weight: 600; }
         .sidebar-header p { font-size: 13px; opacity: 0.8; }
         .sidebar-menu { padding: 20px 0; }
         .menu-item { padding: 15px 25px; color: white; text-decoration: none; display: block; transition: all 0.3s; border-left: 3px solid transparent; font-size: 14px; }
@@ -305,7 +305,7 @@ $professor_name = $stmt->get_result()->fetch_assoc()['full_name'];
             <nav class="sidebar-menu">
                 <a href="prof_dashboard.php" class="menu-item">Dashboard</a>
                 <a href="prof_advisees.php" class="menu-item">My Advisees</a>
-                <a href="prof_study_plans.php" class="menu-item">Study Plans</a>
+                <a href="prof_advising_forms.php" class="menu-item">Advising Forms</a>
                 <a href="prof_acadadvising.php" class="menu-item">Academic Advising</a>
                 <a href="prof_concerns.php" class="menu-item active">Student Concerns</a>
                 <a href="prof_reports.php" class="menu-item">Reports</a>
