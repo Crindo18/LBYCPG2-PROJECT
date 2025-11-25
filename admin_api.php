@@ -255,41 +255,76 @@ function sendAccountEmail($email, $name, $idNumber, $userType) {
 function addSingleStudent() {
     global $conn;
     
-    $idNumber = $_POST['id_number'];
-    $firstName = $_POST['first_name'];
-    $middleName = $_POST['middle_name'] ?? '';
-    $lastName = $_POST['last_name'];
-    $college = $_POST['college'];
-    $department = $_POST['department'];
-    $program = $_POST['program'];
-    $specialization = $_POST['specialization'] ?? 'N/A';
-    $phone = $_POST['phone_number'];
-    $email = $_POST['email'];
-    $guardianName = $_POST['guardian_name'];
-    $guardianPhone = $_POST['guardian_phone'];
-    
-    // Check if ID already exists
-    $stmt = $conn->prepare("SELECT id FROM students WHERE id_number = ?");
-    $stmt->bind_param("s", $idNumber);
-    $stmt->execute();
-    if ($stmt->get_result()->num_rows > 0) {
-        echo json_encode(['success' => false, 'message' => 'Student ID already exists']);
-        return;
-    }
-    
-    // Hash default password (ID number)
-    $passwordHash = password_hash($idNumber, PASSWORD_DEFAULT);
-    
-    // Insert student
-    $stmt = $conn->prepare("INSERT INTO students (id_number, password, first_name, middle_name, last_name, college, department, program, specialization, phone_number, email, parent_guardian_name, parent_guardian_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssssssssssss", $idNumber, $passwordHash, $firstName, $middleName, $lastName, $college, $department, $program, $specialization, $phone, $email, $guardianName, $guardianPhone);
-    
-    if ($stmt->execute()) {
+    try {
+        $idNumber = $_POST['id_number'];
+        $firstName = $_POST['first_name'];
+        $middleName = $_POST['middle_name'] ?? '';
+        $lastName = $_POST['last_name'];
+        $college = $_POST['college'];
+        $department = $_POST['department'];
+        $program = $_POST['program'];
+        $specialization = $_POST['specialization'] ?? 'N/A';
+        $phone = $_POST['phone_number'];
+        $email = $_POST['email'];
+        $guardianName = $_POST['guardian_name'];
+        $guardianPhone = $_POST['guardian_phone'];
+        
+        // Check if ID already exists in students table
+        $stmt = $conn->prepare("SELECT id FROM students WHERE id_number = ?");
+        $stmt->bind_param("i", $idNumber);
+        $stmt->execute();
+        if ($stmt->get_result()->num_rows > 0) {
+            echo json_encode(['success' => false, 'message' => 'Student ID already exists']);
+            return;
+        }
+        
+        // Check if ID already exists in user_login_info table
+        $stmt = $conn->prepare("SELECT id FROM user_login_info WHERE id_number = ?");
+        $stmt->bind_param("s", $idNumber);
+        $stmt->execute();
+        if ($stmt->get_result()->num_rows > 0) {
+            echo json_encode(['success' => false, 'message' => 'ID number already exists in system']);
+            return;
+        }
+        
+        // Begin transaction
+        $conn->begin_transaction();
+        
+        // Step 1: Insert into students table
+        $stmt = $conn->prepare("INSERT INTO students (id_number, first_name, middle_name, last_name, college, department, program, specialization, phone_number, email, parent_guardian_name, parent_guardian_number, advising_cleared, accumulated_failed_units) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)");
+        $stmt->bind_param("isssssssssss", $idNumber, $firstName, $middleName, $lastName, $college, $department, $program, $specialization, $phone, $email, $guardianName, $guardianPhone);
+        
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to insert into students table: ' . $stmt->error);
+        }
+        
+        // Step 2: Hash password and insert into user_login_info table
+        $passwordHash = password_hash($idNumber, PASSWORD_DEFAULT);
+        $userType = 'student';
+        
+        $stmt = $conn->prepare("INSERT INTO user_login_info (id_number, username, password, user_type) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("ssss", $idNumber, $idNumber, $passwordHash, $userType);
+        
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to insert into user_login_info table: ' . $stmt->error);
+        }
+        
+        // Commit transaction
+        $conn->commit();
+        
+        // Step 3: Send email notification
         $fullName = trim("$firstName $middleName $lastName");
-        sendAccountEmail($email, $fullName, $idNumber, 'student');
-        echo json_encode(['success' => true, 'message' => 'Student added successfully. Login credentials sent to email.']);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+        $emailSent = sendAccountEmail($email, $fullName, $idNumber, 'student');
+        
+        if ($emailSent) {
+            echo json_encode(['success' => true, 'message' => 'Student added successfully. Login credentials sent to email.']);
+        } else {
+            echo json_encode(['success' => true, 'message' => 'Student added successfully, but email notification failed. Default password is: ' . $idNumber]);
+        }
+        
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
     }
 }
 
@@ -321,50 +356,117 @@ function editStudent() {
 
 function deleteStudent() {
     global $conn;
-    $studentId = $_POST['student_id'];
     
-    $stmt = $conn->prepare("DELETE FROM students WHERE id = ?");
-    $stmt->bind_param("i", $studentId);
-    
-    if ($stmt->execute()) {
+    try {
+        $studentId = $_POST['student_id'];
+        
+        // Get student's id_number first
+        $stmt = $conn->prepare("SELECT id_number FROM students WHERE id = ?");
+        $stmt->bind_param("i", $studentId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows === 0) {
+            echo json_encode(['success' => false, 'message' => 'Student not found']);
+            return;
+        }
+        
+        $student = $result->fetch_assoc();
+        $idNumber = $student['id_number'];
+        
+        // Begin transaction
+        $conn->begin_transaction();
+        
+        // Delete from students table
+        $stmt = $conn->prepare("DELETE FROM students WHERE id = ?");
+        $stmt->bind_param("i", $studentId);
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to delete from students table');
+        }
+        
+        // Delete from user_login_info table
+        $stmt = $conn->prepare("DELETE FROM user_login_info WHERE id_number = ? AND user_type = 'student'");
+        $stmt->bind_param("s", $idNumber);
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to delete from user_login_info table');
+        }
+        
+        $conn->commit();
         echo json_encode(['success' => true, 'message' => 'Student deleted successfully']);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+        
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
     }
 }
 
 function addSingleProfessor() {
     global $conn;
     
-    $idNumber = $_POST['id_number'];
-    $firstName = $_POST['first_name'];
-    $middleName = $_POST['middle_name'] ?? '';
-    $lastName = $_POST['last_name'];
-    $department = $_POST['department'];
-    $email = $_POST['email'];
-    
-    // Check if ID already exists
-    $stmt = $conn->prepare("SELECT id FROM professors WHERE id_number = ?");
-    $stmt->bind_param("s", $idNumber);
-    $stmt->execute();
-    if ($stmt->get_result()->num_rows > 0) {
-        echo json_encode(['success' => false, 'message' => 'Professor ID already exists']);
-        return;
-    }
-    
-    // Hash default password (ID number)
-    $passwordHash = password_hash($idNumber, PASSWORD_DEFAULT);
-    
-    // Insert professor
-    $stmt = $conn->prepare("INSERT INTO professors (id_number, password, first_name, middle_name, last_name, department, email) VALUES (?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssssss", $idNumber, $passwordHash, $firstName, $middleName, $lastName, $department, $email);
-    
-    if ($stmt->execute()) {
+    try {
+        $idNumber = $_POST['id_number'];
+        $firstName = $_POST['first_name'];
+        $middleName = $_POST['middle_name'] ?? '';
+        $lastName = $_POST['last_name'];
+        $department = $_POST['department'];
+        $email = $_POST['email'];
+        
+        // Check if ID already exists in professors table
+        $stmt = $conn->prepare("SELECT id FROM professors WHERE id_number = ?");
+        $stmt->bind_param("i", $idNumber);
+        $stmt->execute();
+        if ($stmt->get_result()->num_rows > 0) {
+            echo json_encode(['success' => false, 'message' => 'Professor ID already exists']);
+            return;
+        }
+        
+        // Check if ID already exists in user_login_info table
+        $stmt = $conn->prepare("SELECT id FROM user_login_info WHERE id_number = ?");
+        $stmt->bind_param("s", $idNumber);
+        $stmt->execute();
+        if ($stmt->get_result()->num_rows > 0) {
+            echo json_encode(['success' => false, 'message' => 'ID number already exists in system']);
+            return;
+        }
+        
+        // Begin transaction
+        $conn->begin_transaction();
+        
+        // Step 1: Insert into professors table
+        $stmt = $conn->prepare("INSERT INTO professors (id_number, first_name, middle_name, last_name, department, email) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("isssss", $idNumber, $firstName, $middleName, $lastName, $department, $email);
+        
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to insert into professors table: ' . $stmt->error);
+        }
+        
+        // Step 2: Hash password and insert into user_login_info table
+        $passwordHash = password_hash($idNumber, PASSWORD_DEFAULT);
+        $userType = 'professor';
+        
+        $stmt = $conn->prepare("INSERT INTO user_login_info (id_number, username, password, user_type) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("ssss", $idNumber, $idNumber, $passwordHash, $userType);
+        
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to insert into user_login_info table: ' . $stmt->error);
+        }
+        
+        // Commit transaction
+        $conn->commit();
+        
+        // Step 3: Send email notification
         $fullName = trim("$firstName $middleName $lastName");
-        sendAccountEmail($email, $fullName, $idNumber, 'professor');
-        echo json_encode(['success' => true, 'message' => 'Professor added successfully. Login credentials sent to email.']);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+        $emailSent = sendAccountEmail($email, $fullName, $idNumber, 'professor');
+        
+        if ($emailSent) {
+            echo json_encode(['success' => true, 'message' => 'Professor added successfully. Login credentials sent to email.']);
+        } else {
+            echo json_encode(['success' => true, 'message' => 'Professor added successfully, but email notification failed. Default password is: ' . $idNumber]);
+        }
+        
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
     }
 }
 
@@ -390,26 +492,58 @@ function editProfessor() {
 
 function deleteProfessor() {
     global $conn;
-    $professorId = $_POST['professor_id'];
     
-    // Check if professor has assigned students
-    $stmt = $conn->prepare("SELECT COUNT(*) as count FROM students WHERE advisor_id = ?");
-    $stmt->bind_param("i", $professorId);
-    $stmt->execute();
-    $result = $stmt->get_result()->fetch_assoc();
-    
-    if ($result['count'] > 0) {
-        echo json_encode(['success' => false, 'message' => 'Cannot delete professor with assigned advisees. Please reassign students first.']);
-        return;
-    }
-    
-    $stmt = $conn->prepare("DELETE FROM professors WHERE id = ?");
-    $stmt->bind_param("i", $professorId);
-    
-    if ($stmt->execute()) {
+    try {
+        $professorId = $_POST['professor_id'];
+        
+        // Check if professor has assigned students
+        $stmt = $conn->prepare("SELECT COUNT(*) as count FROM students WHERE advisor_id = ?");
+        $stmt->bind_param("i", $professorId);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        
+        if ($result['count'] > 0) {
+            echo json_encode(['success' => false, 'message' => 'Cannot delete professor with assigned advisees. Please reassign students first.']);
+            return;
+        }
+        
+        // Get professor's id_number first
+        $stmt = $conn->prepare("SELECT id_number FROM professors WHERE id = ?");
+        $stmt->bind_param("i", $professorId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows === 0) {
+            echo json_encode(['success' => false, 'message' => 'Professor not found']);
+            return;
+        }
+        
+        $professor = $result->fetch_assoc();
+        $idNumber = $professor['id_number'];
+        
+        // Begin transaction
+        $conn->begin_transaction();
+        
+        // Delete from professors table
+        $stmt = $conn->prepare("DELETE FROM professors WHERE id = ?");
+        $stmt->bind_param("i", $professorId);
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to delete from professors table');
+        }
+        
+        // Delete from user_login_info table
+        $stmt = $conn->prepare("DELETE FROM user_login_info WHERE id_number = ? AND user_type = 'professor'");
+        $stmt->bind_param("s", $idNumber);
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to delete from user_login_info table');
+        }
+        
+        $conn->commit();
         echo json_encode(['success' => true, 'message' => 'Professor deleted successfully']);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+        
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
     }
 }
 function getCourseCatalog() { 
