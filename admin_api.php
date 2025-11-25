@@ -497,8 +497,7 @@ function getDashboardStats() {
     $latestPlanResult = $conn->query("
         SELECT academic_year, term 
         FROM study_plans 
-        WHERE status IN ('pending', 'approved')
-        ORDER BY updated_at DESC 
+        ORDER BY submission_date DESC 
         LIMIT 1
     ");
     $latestPlan = $latestPlanResult && $latestPlanResult->num_rows > 0
@@ -518,8 +517,7 @@ function getDashboardStats() {
             FROM study_plans sp
             JOIN current_subjects cs ON cs.study_plan_id = sp.id
             WHERE sp.academic_year = ? 
-              AND sp.term = ? 
-              AND sp.status IN ('pending', 'approved')
+              AND sp.term = ?
             GROUP BY cs.subject_code
             ORDER BY student_count DESC
             LIMIT 5
@@ -538,8 +536,7 @@ function getDashboardStats() {
             FROM study_plans sp
             JOIN planned_subjects ps ON ps.study_plan_id = sp.id
             WHERE sp.academic_year = ? 
-              AND sp.term = ? 
-              AND sp.status IN ('pending', 'approved')
+              AND sp.term = ?
             GROUP BY ps.subject_code
             ORDER BY student_count DESC
             LIMIT 5

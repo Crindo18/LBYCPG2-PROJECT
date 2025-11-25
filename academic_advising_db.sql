@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 24, 2025 at 10:20 PM
+-- Generation Time: Nov 25, 2025 at 05:16 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -48,7 +48,11 @@ CREATE TABLE `academic_advising_forms` (
 
 INSERT INTO `academic_advising_forms` (`id`, `student_id`, `adviser_id`, `form_data`, `grades_screenshot`, `booklet_file`, `status`, `adviser_comments`, `submitted_at`, `reviewed_at`, `created_at`, `updated_at`) VALUES
 (1, 8, NULL, '{\"academic_year\":\"2024-2025\",\"term\":\"Term 1\",\"current_year_failed_units\":\"3\",\"overall_failed_units\":\"3\",\"previous_term_gpa\":\"3\",\"cumulative_gpa\":\"3\",\"max_course_load_units\":\"21\",\"total_enrolled_units\":\"21\",\"additional_notes\":\"\",\"certify_prerequisites\":\"1\",\"certify_accuracy\":\"1\",\"request_meeting\":\"0\"}', 'uploads/advising_forms/8_1764010812_grade.pdf', 'uploads/advising_forms/8_1764010812_booklet.pdf', 'pending', NULL, '2025-11-24 19:00:12', NULL, '2025-11-24 19:00:12', '2025-11-24 19:00:12'),
-(2, 5, NULL, '{\"academic_year\":\"2024-2025\",\"term\":\"Term 1\",\"current_year_failed_units\":\"3\",\"overall_failed_units\":\"3\",\"previous_term_gpa\":\"3\",\"cumulative_gpa\":\"3\",\"max_course_load_units\":\"21\",\"total_enrolled_units\":\"21\",\"additional_notes\":\"\",\"certify_prerequisites\":\"1\",\"certify_accuracy\":\"1\",\"request_meeting\":\"0\"}', 'uploads/advising_forms/5_1764011940_grade.pdf', 'uploads/advising_forms/5_1764011940_booklet.pdf', 'pending', NULL, '2025-11-24 19:19:00', NULL, '2025-11-24 19:19:00', '2025-11-24 19:19:00');
+(2, 5, NULL, '{\"academic_year\":\"2024-2025\",\"term\":\"Term 1\",\"current_year_failed_units\":\"3\",\"overall_failed_units\":\"3\",\"previous_term_gpa\":\"3\",\"cumulative_gpa\":\"3\",\"max_course_load_units\":\"21\",\"total_enrolled_units\":\"21\",\"additional_notes\":\"\",\"certify_prerequisites\":\"1\",\"certify_accuracy\":\"1\",\"request_meeting\":\"0\"}', 'uploads/advising_forms/5_1764011940_grade.pdf', 'uploads/advising_forms/5_1764011940_booklet.pdf', 'pending', NULL, '2025-11-24 19:19:00', NULL, '2025-11-24 19:19:00', '2025-11-24 19:19:00'),
+(3, 5, NULL, '{\"academic_year\":\"2024-2025\",\"term\":\"Term 1\",\"current_year_failed_units\":\"0\",\"overall_failed_units\":\"3\",\"previous_term_gpa\":\"3.453\",\"cumulative_gpa\":\"2.654\",\"trimestral_honors\":\"\",\"max_course_load_units\":\"21\",\"total_enrolled_units\":\"12\",\"additional_notes\":\"\",\"certify_prerequisites\":\"1\",\"certify_accuracy\":\"1\",\"request_meeting\":\"0\"}', 'uploads/advising_forms/5_1764019614_grade.pdf', NULL, 'pending', NULL, '2025-11-24 21:26:54', NULL, '2025-11-24 21:26:54', '2025-11-24 21:26:54'),
+(8, 5, NULL, '{\"academic_year\":\"2024-2025\",\"term\":\"Term 1\",\"current_year_failed_units\":\"0\",\"overall_failed_units\":\"3\",\"previous_term_gpa\":\"2.45\",\"cumulative_gpa\":\"3.546\",\"trimestral_honors\":\"\",\"max_course_load_units\":\"21\",\"total_enrolled_units\":\"6\",\"additional_notes\":\"\",\"request_meeting\":\"0\"}', 'uploads/advising_forms/5_1764021938_grade.pdf', NULL, 'pending', NULL, '2025-11-24 22:05:38', NULL, '2025-11-24 22:05:38', '2025-11-24 22:05:38'),
+(9, 5, NULL, '{\"academic_year\":\"2024-2025\",\"term\":\"Term 2\",\"current_year_failed_units\":\"0\",\"overall_failed_units\":\"0\",\"previous_term_gpa\":\"3.43\",\"cumulative_gpa\":\"2.34\",\"trimestral_honors\":\"\",\"max_course_load_units\":\"21\",\"total_enrolled_units\":\"6\",\"additional_notes\":\"\",\"request_meeting\":\"0\"}', 'uploads/advising_forms/5_1764022640_grade.pdf', NULL, 'pending', NULL, '2025-11-24 22:17:20', NULL, '2025-11-24 22:17:20', '2025-11-24 22:17:20'),
+(10, 5, NULL, '{\"academic_year\":\"2024-2025\",\"term\":\"Term 1\",\"current_year_failed_units\":\"0\",\"overall_failed_units\":\"6\",\"previous_term_gpa\":\"1.222\",\"cumulative_gpa\":\"1.222\",\"trimestral_honors\":\"\",\"max_course_load_units\":\"21\",\"total_enrolled_units\":\"6\",\"additional_notes\":\"\",\"request_meeting\":\"0\"}', 'uploads/advising_forms/5_1764037889_grade.pdf', NULL, 'pending', NULL, '2025-11-25 02:31:29', NULL, '2025-11-25 02:31:29', '2025-11-25 02:31:29');
 
 -- --------------------------------------------------------
 
@@ -85,6 +89,13 @@ CREATE TABLE `advising_deadlines` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `advising_deadlines`
+--
+
+INSERT INTO `advising_deadlines` (`id`, `professor_id`, `deadline_date`, `term`, `created_at`) VALUES
+(1, 55, '2025-11-27', 'energy crystal', '2025-11-25 04:14:59');
+
 -- --------------------------------------------------------
 
 --
@@ -106,7 +117,18 @@ CREATE TABLE `advising_form_courses` (
 
 INSERT INTO `advising_form_courses` (`id`, `form_id`, `course_type`, `course_code`, `prerequisites`, `units`) VALUES
 (1, 1, 'current', 'CALENG1', NULL, 3),
-(2, 2, 'current', 'CALENG1', NULL, 3);
+(2, 2, 'current', 'CALENG1', NULL, 3),
+(3, 3, 'current', 'CSYSARC', NULL, 3),
+(4, 3, 'current', 'CSINPRO', NULL, 3),
+(5, 3, 'current', 'CPEPRAC', NULL, 2),
+(6, 3, 'current', 'CPEPRAC', NULL, 2),
+(7, 3, 'current', 'CPECOG1', NULL, 2),
+(8, 8, 'current', 'CSMCPRO', NULL, 3),
+(9, 8, 'current', 'CSNETWK', NULL, 3),
+(10, 9, 'current', 'CSARCH2', NULL, 3),
+(11, 9, 'current', 'CSALGCM', NULL, 3),
+(12, 10, 'current', 'CSMCPRO', NULL, 3),
+(13, 10, 'current', 'CSMCPRO', NULL, 3);
 
 -- --------------------------------------------------------
 
@@ -149,20 +171,44 @@ CREATE TABLE `advising_schedules` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `advising_schedules`
+--
+
+INSERT INTO `advising_schedules` (`id`, `professor_id`, `schedule_date`, `start_time`, `end_time`, `location`, `max_slots`, `booked_count`, `is_available`, `created_at`) VALUES
+(1, 55, '2025-11-26', '11:00:00', '11:50:00', '4430', 1, 0, 1, '2025-11-25 02:49:10');
+
 -- --------------------------------------------------------
 
 --
--- Table structure for table `student_appointments`
+-- Table structure for table `booklet_edit_requests`
 --
 
-CREATE TABLE `student_appointments` (
+CREATE TABLE `booklet_edit_requests` (
   `id` int(11) NOT NULL,
-  `schedule_id` int(11) NOT NULL,
   `student_id` int(11) NOT NULL,
-  `status` enum('pending','confirmed','cancelled') DEFAULT 'pending',
-  `notes` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `booklet_record_id` int(11) NOT NULL,
+  `field_name` varchar(50) NOT NULL,
+  `old_value` text DEFAULT NULL,
+  `new_value` text DEFAULT NULL,
+  `reason` text DEFAULT NULL,
+  `status` enum('pending','approved','rejected') DEFAULT 'pending',
+  `reviewed_by` int(11) DEFAULT NULL,
+  `review_notes` text DEFAULT NULL,
+  `requested_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `reviewed_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `booklet_edit_requests`
+--
+
+INSERT INTO `booklet_edit_requests` (`id`, `student_id`, `booklet_record_id`, `field_name`, `old_value`, `new_value`, `reason`, `status`, `reviewed_by`, `review_notes`, `requested_at`, `reviewed_at`) VALUES
+(1, 5, 1, 'grade', 'N/A', '4.00', 'errors', 'pending', NULL, NULL, '2025-11-24 22:08:04', NULL),
+(2, 5, 5, 'grade', 'N/A', '0 (Failed)', 'error', 'pending', NULL, NULL, '2025-11-25 02:39:53', NULL),
+(3, 5, 6, 'grade', 'N/A', '0', 'y', 'pending', NULL, NULL, '2025-11-25 02:40:13', NULL),
+(4, 5, 4, 'grade', 'N/A', '0 (Failed)', '8', 'pending', NULL, NULL, '2025-11-25 02:45:21', NULL),
+(5, 5, 6, 'grade', '0.00', '0.00 (Failed)', '9', 'pending', NULL, NULL, '2025-11-25 02:45:30', NULL);
 
 -- --------------------------------------------------------
 
@@ -569,7 +615,7 @@ CREATE TABLE `students` (
 
 INSERT INTO `students` (`id`, `id_number`, `first_name`, `middle_name`, `last_name`, `college`, `department`, `program`, `specialization`, `phone_number`, `email`, `parent_guardian_name`, `parent_guardian_number`, `advisor_id`, `advising_cleared`, `accumulated_failed_units`, `created_at`) VALUES
 (2, 12012345, 'Juan', 'Santos', 'Dela Cruz', 'Gokongwei College of Engineering', 'The Department of Electronics, Computer, and Electrical Engineering (DECE)', 'BS Computer Engineering', 'N/A', '+63 917 123 4567', 'juan_delacruz@dlsu.edu.ph', 'Maria Bianca Cruz', '+63 918 765 4321', 3, 1, 0, '2025-11-24 09:37:00'),
-(5, 12012346, 'Maria', 'Angeles', 'Santos', 'Gokongwei College of Engineering', 'GCOE-ECEE', 'BS Computer Engineering', 'N/A', '+63 917 234 5678', 'maria.santos@dlsu.edu.ph', 'Roberto Santos', '+63 918 876 5432', 55, 1, 3, '2025-11-24 13:29:16'),
+(5, 12012346, 'Maria', 'Angeles', 'Santos', 'Gokongwei College of Engineering', 'GCOE-ECEE', 'BS Computer Engineering', 'N/A', '+63 917 234 5678', 'maria.santos@dlsu.edu.ph', 'Roberto Santos', '+63 918 876 5432', 55, 1, 6, '2025-11-24 13:29:16'),
 (6, 12012347, 'Jose', 'Miguel', 'Reyes', 'Gokongwei College of Engineering', 'GCOE-ECEE', 'BS Computer Engineering', 'N/A', '+63 917 345 6789', 'jose.reyes@dlsu.edu.ph', 'Carmen Reyes', '+63 918 987 6543', NULL, 0, 0, '2025-11-24 13:29:16'),
 (7, 12012348, 'Ana', 'Grace', 'Garcia', 'Gokongwei College of Engineering', 'GCOE-ECEE', 'BS Computer Engineering', 'N/A', '+63 917 456 7890', 'ana.garcia@dlsu.edu.ph', 'Pedro Garcia', '+63 918 098 7654', NULL, 0, 0, '2025-11-24 13:29:16'),
 (8, 12012349, 'Carlos', 'Jose', 'Martinez', 'Gokongwei College of Engineering', 'GCOE-ECEE', 'BS Computer Engineering', 'N/A', '+63 917 567 8901', 'carlos.martinez@dlsu.edu.ph', 'Linda Martinez', '+63 918 109 8765', NULL, 0, 3, '2025-11-24 13:29:16'),
@@ -658,8 +704,48 @@ CREATE TABLE `student_advising_booklet` (
   `grade` decimal(3,2) DEFAULT NULL,
   `is_failed` tinyint(1) DEFAULT 0,
   `remarks` varchar(100) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `approval_status` enum('approved','pending','rejected') DEFAULT 'pending',
+  `modified_by` enum('student','professor','admin') DEFAULT 'student',
+  `approval_notes` text DEFAULT NULL,
+  `previous_grade` decimal(3,2) DEFAULT NULL,
+  `edit_requested_at` timestamp NULL DEFAULT NULL,
+  `last_modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `student_advising_booklet`
+--
+
+INSERT INTO `student_advising_booklet` (`id`, `student_id`, `academic_year`, `term`, `course_code`, `course_name`, `units`, `grade`, `is_failed`, `remarks`, `created_at`, `approval_status`, `modified_by`, `approval_notes`, `previous_grade`, `edit_requested_at`, `last_modified`) VALUES
+(1, 5, '2024-2025', 1, 'CSMCPRO', 'Microprocessors', 3, 4.00, 0, 'Enrolled', '2025-11-24 22:05:38', 'pending', 'student', NULL, NULL, '2025-11-24 22:08:04', '2025-11-24 22:08:04'),
+(2, 5, '2024-2025', 1, 'CSNETWK', 'Computer Networks', 3, NULL, 0, 'Enrolled', '2025-11-24 22:05:38', 'pending', 'student', NULL, NULL, NULL, '2025-11-24 22:05:38'),
+(3, 5, '2024-2025', 2, 'CSARCH2', 'Computer Architecture 2', 3, NULL, 0, 'Enrolled', '2025-11-24 22:17:20', 'pending', 'student', NULL, NULL, NULL, '2025-11-24 22:17:20'),
+(4, 5, '2024-2025', 2, 'CSALGCM', 'Design and Analysis of Algorithms', 3, 0.00, 1, 'Enrolled', '2025-11-24 22:17:20', 'pending', 'student', NULL, NULL, '2025-11-25 02:45:21', '2025-11-25 02:45:21'),
+(5, 5, '2024-2025', 1, 'CSMCPRO', 'Microprocessors', 3, 0.00, 1, 'Enrolled', '2025-11-25 02:31:29', 'pending', 'student', NULL, NULL, '2025-11-25 02:39:53', '2025-11-25 02:39:53'),
+(6, 5, '2024-2025', 1, 'CSMCPRO', 'Microprocessors', 3, 0.00, 1, 'Enrolled', '2025-11-25 02:31:29', 'pending', 'student', NULL, 0.00, '2025-11-25 02:45:30', '2025-11-25 02:45:30');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `student_appointments`
+--
+
+CREATE TABLE `student_appointments` (
+  `id` int(11) NOT NULL,
+  `schedule_id` int(11) NOT NULL,
+  `student_id` int(11) NOT NULL,
+  `status` enum('pending','confirmed','cancelled') DEFAULT 'pending',
+  `notes` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `student_appointments`
+--
+
+INSERT INTO `student_appointments` (`id`, `schedule_id`, `student_id`, `status`, `notes`, `created_at`) VALUES
+(1, 1, 5, 'confirmed', NULL, '2025-11-25 02:49:31');
 
 -- --------------------------------------------------------
 
@@ -918,12 +1004,14 @@ ALTER TABLE `advising_schedules`
   ADD KEY `professor_id` (`professor_id`);
 
 --
--- Indexes for table `student_appointments`
+-- Indexes for table `booklet_edit_requests`
 --
-ALTER TABLE `student_appointments`
+ALTER TABLE `booklet_edit_requests`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `schedule_id` (`schedule_id`),
-  ADD KEY `student_id` (`student_id`);
+  ADD KEY `idx_student` (`student_id`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `booklet_record_id` (`booklet_record_id`),
+  ADD KEY `reviewed_by` (`reviewed_by`);
 
 --
 -- Indexes for table `bulk_upload_history`
@@ -1032,6 +1120,14 @@ ALTER TABLE `student_advising_booklet`
   ADD KEY `idx_student_year` (`student_id`,`academic_year`,`term`);
 
 --
+-- Indexes for table `student_appointments`
+--
+ALTER TABLE `student_appointments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `schedule_id` (`schedule_id`),
+  ADD KEY `student_id` (`student_id`);
+
+--
 -- Indexes for table `student_concerns`
 --
 ALTER TABLE `student_concerns`
@@ -1077,19 +1173,19 @@ ALTER TABLE `user_login_info`
 -- AUTO_INCREMENT for table `academic_advising_forms`
 --
 ALTER TABLE `academic_advising_forms`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `advising_deadlines`
 --
 ALTER TABLE `advising_deadlines`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `advising_form_courses`
 --
 ALTER TABLE `advising_form_courses`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `advising_form_prerequisites`
@@ -1101,13 +1197,13 @@ ALTER TABLE `advising_form_prerequisites`
 -- AUTO_INCREMENT for table `advising_schedules`
 --
 ALTER TABLE `advising_schedules`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT for table `student_appointments`
+-- AUTO_INCREMENT for table `booklet_edit_requests`
 --
-ALTER TABLE `student_appointments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+ALTER TABLE `booklet_edit_requests`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `bulk_upload_history`
@@ -1179,7 +1275,13 @@ ALTER TABLE `student_academic_performance`
 -- AUTO_INCREMENT for table `student_advising_booklet`
 --
 ALTER TABLE `student_advising_booklet`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `student_appointments`
+--
+ALTER TABLE `student_appointments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `student_concerns`
@@ -1253,11 +1355,12 @@ ALTER TABLE `advising_schedules`
   ADD CONSTRAINT `advising_schedules_ibfk_1` FOREIGN KEY (`professor_id`) REFERENCES `professors` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `student_appointments`
+-- Constraints for table `booklet_edit_requests`
 --
-ALTER TABLE `student_appointments`
-  ADD CONSTRAINT `student_appointments_ibfk_1` FOREIGN KEY (`schedule_id`) REFERENCES `advising_schedules` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `student_appointments_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `students` (`id`) ON DELETE CASCADE;
+ALTER TABLE `booklet_edit_requests`
+  ADD CONSTRAINT `booklet_edit_requests_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `students` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `booklet_edit_requests_ibfk_2` FOREIGN KEY (`booklet_record_id`) REFERENCES `student_advising_booklet` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `booklet_edit_requests_ibfk_3` FOREIGN KEY (`reviewed_by`) REFERENCES `professors` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `bulk_upload_history`
@@ -1332,6 +1435,13 @@ ALTER TABLE `student_academic_performance`
 --
 ALTER TABLE `student_advising_booklet`
   ADD CONSTRAINT `student_advising_booklet_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `students` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `student_appointments`
+--
+ALTER TABLE `student_appointments`
+  ADD CONSTRAINT `student_appointments_ibfk_1` FOREIGN KEY (`schedule_id`) REFERENCES `advising_schedules` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `student_appointments_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `students` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `student_concerns`
