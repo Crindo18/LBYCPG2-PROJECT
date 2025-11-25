@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$user_id]);
         $user = $stmt->fetch();
         
-        if ($user && password_verify($current_password, $user['password'])) {
+        if ($u word_verify($current_password, $user['password'])) {
             $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
             
             // Update password in user_login_info
