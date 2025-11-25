@@ -143,7 +143,7 @@ $programs = $stmt->fetchAll();
         
         .sidebar {
             width: 260px;
-            background: #6a1b9a;
+            background: #00A36C;
             color: white;
             position: fixed;
             height: 100vh;
@@ -152,7 +152,7 @@ $programs = $stmt->fetchAll();
         
         .sidebar-header {
             padding: 25px 20px;
-            background: #4a148c;
+            background: #006B4A;
         }
         
         .sidebar-header h2 {
@@ -181,7 +181,7 @@ $programs = $stmt->fetchAll();
         .menu-item:hover,
         .menu-item.active {
             background: rgba(255,255,255,0.1);
-            border-left-color: #BA68C8;
+            border-left-color: #7FE5B8;
         }
         
         .main-content {
@@ -204,7 +204,7 @@ $programs = $stmt->fetchAll();
         
         .top-bar h1 {
             font-size: 28px;
-            color: #6a1b9a;
+            color: #00A36C;
         }
         
         .logout-btn {
@@ -245,7 +245,7 @@ $programs = $stmt->fetchAll();
         
         .content-card h2 {
             font-size: 22px;
-            color: #6a1b9a;
+            color: #00A36C;
             margin-bottom: 20px;
             padding-bottom: 15px;
             border-bottom: 2px solid #f0f0f0;
@@ -253,7 +253,7 @@ $programs = $stmt->fetchAll();
         
         .btn-add-new {
             padding: 12px 24px;
-            background: #6a1b9a;
+            background: #00A36C;
             color: white;
             border: none;
             border-radius: 5px;
@@ -291,7 +291,7 @@ $programs = $stmt->fetchAll();
         }
         
         .program-title h3 {
-            color: #6a1b9a;
+            color: #00A36C;
             font-size: 20px;
             margin-bottom: 5px;
         }
@@ -387,7 +387,7 @@ $programs = $stmt->fetchAll();
         }
         
         .modal-header h3 {
-            color: #6a1b9a;
+            color: #00A36C;
             font-size: 24px;
         }
         
@@ -450,7 +450,7 @@ $programs = $stmt->fetchAll();
         .file-upload-label {
             display: inline-block;
             padding: 10px 20px;
-            background: #6a1b9a;
+            background: #00A36C;
             color: white;
             border-radius: 5px;
             cursor: pointer;
@@ -463,7 +463,7 @@ $programs = $stmt->fetchAll();
         
         .btn-save {
             padding: 12px 30px;
-            background: #6a1b9a;
+            background: #00A36C;
             color: white;
             border: none;
             border-radius: 5px;
@@ -473,6 +473,7 @@ $programs = $stmt->fetchAll();
             margin-top: 20px;
         }
     </style>
+
 </head>
 <body>
     <div class="container">

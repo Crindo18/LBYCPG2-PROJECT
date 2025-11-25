@@ -17,19 +17,19 @@ $student_name = $stmt->get_result()->fetch_assoc()['name'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Academic Booklet</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
         .container { display: flex; min-height: 100vh; }
-        .sidebar { width: 260px; background: #1976D2; color: white; position: fixed; height: 100vh; overflow-y: auto; }
-        .sidebar-header { padding: 25px 20px; background: #1565C0; }
+        .sidebar { width: 260px; background: #00A36C; color: white; position: fixed; height: 100vh; overflow-y: auto; }
+        .sidebar-header { padding: 25px 20px; background: #008558; }
         .sidebar-header h2 { font-size: 18px; margin-bottom: 5px; }
         .sidebar-header p { font-size: 13px; opacity: 0.9; }
         .sidebar-menu { padding: 20px 0; }
         .menu-item { padding: 15px 25px; color: white; text-decoration: none; display: block; transition: all 0.3s; border-left: 3px solid transparent; }
-        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #90CAF9; }
+        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #7FE5B8; }
         .main-content { margin-left: 260px; flex: 1; padding: 30px; width: calc(100% - 260px); }
         .top-bar { background: white; padding: 20px 30px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .top-bar h1 { font-size: 28px; color: #1976D2; }
+        .top-bar h1 { font-size: 28px; color: #00A36C; }
         .logout-btn { padding: 8px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; text-decoration: none; font-size: 14px; }
         
         /* Filter Section */
@@ -142,10 +142,10 @@ $student_name = $stmt->get_result()->fetch_assoc()['name'];
 
         /* Buttons & Modals */
         .btn { padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.3s; }
-        .btn-primary { background: #1976D2; color: white; }
+        .btn-primary { background: #00A36C; color: white; }
         .btn-secondary { background: #6c757d; color: white; }
-        .edit-icon { color: #1976D2; cursor: pointer; font-size: 16px; float: right; margin-left: 5px; }
-        .edit-icon:hover { color: #1565C0; }
+        .edit-icon { color: #00A36C; cursor: pointer; font-size: 16px; float: right; margin-left: 5px; }
+        .edit-icon:hover { color: #008558; }
         
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
         .modal.active { display: flex; align-items: center; justify-content: center; }
@@ -157,6 +157,7 @@ $student_name = $stmt->get_result()->fetch_assoc()['name'];
         .empty-state { text-align: center; padding: 60px 20px; color: #999; }
         .loading { text-align: center; padding: 40px; color: #666; }
     </style>
+
 </head>
 <body>
     <div class="container">

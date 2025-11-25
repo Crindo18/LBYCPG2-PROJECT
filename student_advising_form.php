@@ -34,37 +34,37 @@ while($row = $course_query->fetch_assoc()) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Academic Advising Form</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
         .container { display: flex; min-height: 100vh; }
         
         /* Sidebar */
-        .sidebar { width: 260px; background: #1976D2; color: white; position: fixed; height: 100vh; overflow-y: auto; }
-        .sidebar-header { padding: 25px 20px; background: #1565C0; }
+        .sidebar { width: 260px; background: #00A36C; color: white; position: fixed; height: 100vh; overflow-y: auto; }
+        .sidebar-header { padding: 25px 20px; background: #008558; }
         .sidebar-header h2 { font-size: 18px; margin-bottom: 5px; }
         .sidebar-header p { font-size: 13px; opacity: 0.9; }
         .sidebar-menu { padding: 20px 0; }
         .menu-item { padding: 15px 25px; color: white; text-decoration: none; display: block; transition: all 0.3s; border-left: 3px solid transparent; }
-        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #90CAF9; }
+        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #7FE5B8; }
         
         /* Main Content */
         .main-content { margin-left: 260px; flex: 1; padding: 30px; width: calc(100% - 260px); }
         .top-bar { background: white; padding: 20px 30px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .top-bar h1 { font-size: 28px; color: #1976D2; }
+        .top-bar h1 { font-size: 28px; color: #00A36C; }
         .logout-btn { padding: 8px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; text-decoration: none; font-size: 14px; }
         
         /* Tabs */
         .tabs { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 2px solid #e0e0e0; flex-wrap: wrap; }
         .tab-btn { padding: 12px 24px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 15px; font-weight: 600; color: #666; transition: all 0.3s; }
-        .tab-btn.active { color: #1976D2; border-bottom-color: #1976D2; }
+        .tab-btn.active { color: #00A36C; border-bottom-color: #00A36C; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         
         /* Content Cards */
         .content-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        .content-card h3 { font-size: 20px; color: #1976D2; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
-        .section-header { font-size: 18px; color: #1976D2; margin: 25px 0 15px 0; padding-bottom: 10px; border-bottom: 1px solid #e0e0e0; }
+        .content-card h3 { font-size: 20px; color: #00A36C; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
+        .section-header { font-size: 18px; color: #00A36C; margin: 25px 0 15px 0; padding-bottom: 10px; border-bottom: 1px solid #e0e0e0; }
         
         /* Form Elements */
         .form-group { margin-bottom: 20px; }
@@ -77,7 +77,7 @@ while($row = $course_query->fetch_assoc()) {
         /* Course Entry */
         .course-entry-container { margin-bottom: 30px; border: 1px solid #eee; padding: 15px; border-radius: 8px; }
         .course-entry { background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 15px; position: relative; }
-        .course-entry h4 { color: #1976D2; margin-bottom: 15px; font-size: 16px; }
+        .course-entry h4 { color: #00A36C; margin-bottom: 15px; font-size: 16px; }
         .remove-course-btn { position: absolute; top: 15px; right: 15px; background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 13px; }
         .add-course-btn { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 600; margin-top: 10px; width: 100%; }
         
@@ -107,10 +107,10 @@ while($row = $course_query->fetch_assoc()) {
         
         /* File Upload */
         .file-upload { border: 2px dashed #ddd; border-radius: 8px; padding: 30px; text-align: center; background: #fafafa; cursor: pointer; transition: all 0.3s; }
-        .file-upload:hover { border-color: #1976D2; background: #f0f7ff; }
+        .file-upload:hover { border-color: #00A36C; background: #f0f7ff; }
         .file-upload input[type="file"] { display: none; }
         .file-upload-label { cursor: pointer; color: #666; }
-        .file-preview { margin-top: 15px; padding: 10px; background: #e3f2fd; border-radius: 5px; font-size: 14px; color: #1565C0; }
+        .file-preview { margin-top: 15px; padding: 10px; background: #e3f2fd; border-radius: 5px; font-size: 14px; color: #008558; }
         
         /* Checkbox */
         .checkbox-group { display: flex; align-items: center; gap: 10px; margin: 20px 0; }
@@ -119,8 +119,8 @@ while($row = $course_query->fetch_assoc()) {
         
         /* Buttons */
         .btn { padding: 12px 30px; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600; transition: all 0.3s; }
-        .btn-primary { background: #1976D2; color: white; }
-        .btn-primary:hover { background: #1565C0; }
+        .btn-primary { background: #00A36C; color: white; }
+        .btn-primary:hover { background: #008558; }
         .btn-secondary { background: #6c757d; color: white; }
         .btn-secondary:hover { background: #545b62; }
         .btn-container { display: flex; gap: 15px; margin-top: 30px; }
@@ -143,7 +143,7 @@ while($row = $course_query->fetch_assoc()) {
         .badge.warning { background: #fff3cd; color: #856404; }
         .badge.info { background: #d1ecf1; color: #0c5460; }
         .empty-state { text-align: center; padding: 60px 20px; color: #999; }
-    </style>
+</style>
 </head>
 <body>
     <div class="container">

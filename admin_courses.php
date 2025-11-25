@@ -14,25 +14,25 @@ require_once 'config.php';
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
         .container { display: flex; min-height: 100vh; }
-        .sidebar { width: 260px; background: #6a1b9a; color: white; position: fixed; height: 100vh; overflow-y: auto; }
-        .sidebar-header { padding: 25px 20px; background: #4a148c; }
+        .sidebar { width: 260px; background: #00A36C; color: white; position: fixed; height: 100vh; overflow-y: auto; }
+        .sidebar-header { padding: 25px 20px; background: #006B4A; }
         .sidebar-header h2 { font-size: 18px; margin-bottom: 5px; }
         .sidebar-header p { font-size: 13px; opacity: 0.8; }
         .sidebar-menu { padding: 20px 0; }
         .menu-item { padding: 15px 25px; color: white; text-decoration: none; display: block; transition: all 0.3s; border-left: 3px solid transparent; }
-        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #BA68C8; }
+        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #7FE5B8; }
         .main-content { margin-left: 260px; flex: 1; padding: 30px; width: calc(100% - 260px); }
         .top-bar { background: white; padding: 20px 30px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .top-bar h1 { font-size: 28px; color: #6a1b9a; }
+        .top-bar h1 { font-size: 28px; color: #00A36C; }
         .logout-btn { padding: 8px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; text-decoration: none; font-size: 14px; }
         .content-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        .content-card h2 { font-size: 22px; color: #6a1b9a; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
+        .content-card h2 { font-size: 22px; color: #00A36C; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
         .tabs { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 2px solid #e0e0e0; }
         .tab-btn { padding: 12px 24px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 15px; font-weight: 600; color: #666; transition: all 0.3s; }
-        .tab-btn.active { color: #6a1b9a; border-bottom-color: #6a1b9a; }
+        .tab-btn.active { color: #00A36C; border-bottom-color: #00A36C; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .btn-add-new { padding: 12px 24px; background: #6a1b9a; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600; }
+        .btn-add-new { padding: 12px 24px; background: #00A36C; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600; }
         .btn-add-new:hover { background: #8e24aa; }
         .filter-section { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
         .search-box { flex: 1; min-width: 250px; }
@@ -51,7 +51,7 @@ require_once 'config.php';
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); overflow-y: auto; }
         .modal-content { background-color: white; margin: 50px auto; padding: 0; border-radius: 10px; width: 90%; max-width: 700px; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 25px 30px; border-bottom: 2px solid #f0f0f0; }
-        .modal-header h3 { color: #6a1b9a; font-size: 22px; }
+        .modal-header h3 { color: #00A36C; font-size: 22px; }
         .close { font-size: 28px; font-weight: bold; color: #aaa; cursor: pointer; }
         .close:hover { color: #000; }
         .modal-body { padding: 30px; }
@@ -60,7 +60,7 @@ require_once 'config.php';
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; font-family: inherit; }
         .form-group textarea { resize: vertical; min-height: 80px; }
         .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-        .btn-save { padding: 12px 30px; background: #6a1b9a; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600; }
+        .btn-save { padding: 12px 30px; background: #00A36C; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600; }
         .btn-save:hover { background: #8e24aa; }
         .loading { text-align: center; padding: 40px; color: #666; }
         .no-data { text-align: center; padding: 40px; color: #999; font-style: italic; }

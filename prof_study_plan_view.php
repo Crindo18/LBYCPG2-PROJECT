@@ -63,20 +63,20 @@ while ($row = $subjects_result->fetch_assoc()) {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
         .container { display: flex; min-height: 100vh; }
-        .sidebar { width: 260px; background: #6a1b9a; color: white; position: fixed; height: 100vh; overflow-y: auto; }
-        .sidebar-header { padding: 25px 20px; background: #4a148c; }
+        .sidebar { width: 260px; background: #00A36C; color: white; position: fixed; height: 100vh; overflow-y: auto; }
+        .sidebar-header { padding: 25px 20px; background: #00C97F; }
         .sidebar-header h2 { font-size: 18px; margin-bottom: 5px; }
         .sidebar-header p { font-size: 13px; opacity: 0.8; }
         .sidebar-menu { padding: 20px 0; }
         .menu-item { padding: 15px 25px; color: white; text-decoration: none; display: block; transition: all 0.3s; border-left: 3px solid transparent; }
-        .menu-item:hover { background: rgba(255,255,255,0.1); border-left-color: #BA68C8; }
+        .menu-item:hover { background: rgba(255,255,255,0.1); border-left-color: #7FE5B8; }
         .main-content { margin-left: 260px; flex: 1; padding: 30px; width: calc(100% - 260px); }
         .top-bar { background: white; padding: 20px 30px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .top-bar h1 { font-size: 28px; color: #6a1b9a; }
+        .top-bar h1 { font-size: 28px; color: #00A36C; }
         .back-btn { padding: 8px 20px; background: #757575; color: white; border: none; border-radius: 5px; text-decoration: none; font-size: 14px; margin-right: 10px; }
         .logout-btn { padding: 8px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; text-decoration: none; font-size: 14px; }
         
-        .plan-header { background: linear-gradient(135deg, #6a1b9a 0%, #8e24aa 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(106, 27, 154, 0.3); }
+        .plan-header { background: linear-gradient(135deg, #00A36C 0%, #8e24aa 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0, 163, 108, 0.3); }
         .plan-header h2 { font-size: 28px; margin-bottom: 10px; }
         .plan-header-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
         .plan-header-item { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; }
@@ -84,7 +84,7 @@ while ($row = $subjects_result->fetch_assoc()) {
         .plan-header-item value { font-size: 18px; font-weight: 600; }
         
         .content-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        .content-card h3 { font-size: 22px; color: #6a1b9a; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
+        .content-card h3 { font-size: 22px; color: #00A36C; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
         
         .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px; }
         .info-item { padding: 15px; background: #f8f9fa; border-radius: 8px; }
@@ -97,7 +97,7 @@ while ($row = $subjects_result->fetch_assoc()) {
         .data-table td { padding: 12px; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
         .data-table tr:hover { background: #f8f9fa; }
         .summary-row { background: #f0f7ff; font-weight: 600; }
-        .summary-row td { border-top: 2px solid #6a1b9a; }
+        .summary-row td { border-top: 2px solid #00A36C; }
         
         .badge { padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; }
         .badge.success { background: #d4edda; color: #155724; }
@@ -134,6 +134,7 @@ while ($row = $subjects_result->fetch_assoc()) {
         .feedback-section h4 { color: #2e7d32; margin-bottom: 10px; }
         .feedback-text { color: #333; line-height: 1.6; }
     </style>
+
 </head>
 <body>
     <div class="container">
