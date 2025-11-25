@@ -109,8 +109,8 @@ function getDashboardStats() {
     // Find the most recent Term submitted in the system
     $latestPlanResult = $conn->query("
         SELECT academic_year, term 
-        FROM academic_advising_forms 
-        ORDER BY submitted_at DESC 
+        FROM study_plans 
+        ORDER BY submission_date DESC 
         LIMIT 1
     ");
     $latestPlan = ($latestPlanResult && $latestPlanResult->num_rows > 0) ? $latestPlanResult->fetch_assoc() : null;
@@ -125,12 +125,12 @@ function getDashboardStats() {
         // Fetch course counts from the NEW 'advising_form_courses' table
         // Linked via 'academic_advising_forms'
         $stmt = $conn->prepare("
-            SELECT afc.course_code as subject_code, COUNT(DISTINCT aaf.student_id) as student_count
-            FROM academic_advising_forms aaf
-            JOIN advising_form_courses afc ON afc.form_id = aaf.id
-            WHERE aaf.academic_year = ? 
-              AND aaf.term = ? 
-            GROUP BY afc.course_code
+            SELECT cs.subject_code, COUNT(DISTINCT sp.student_id) as student_count
+            FROM study_plans sp
+            JOIN current_subjects cs ON cs.study_plan_id = sp.id
+            WHERE sp.academic_year = ? 
+              AND sp.term = ?
+            GROUP BY cs.subject_code
             ORDER BY student_count DESC
             LIMIT 5
         ");
@@ -139,6 +139,25 @@ function getDashboardStats() {
         $result = $stmt->get_result();
         while ($row = $result->fetch_assoc()) {
             $current_enrollment[] = $row;
+        }
+        $stmt->close();
+        
+        // Planned enrollment stats
+        $stmt = $conn->prepare("
+            SELECT ps.subject_code, COUNT(DISTINCT sp.student_id) as student_count
+            FROM study_plans sp
+            JOIN planned_subjects ps ON ps.study_plan_id = sp.id
+            WHERE sp.academic_year = ? 
+              AND sp.term = ?
+            GROUP BY ps.subject_code
+            ORDER BY student_count DESC
+            LIMIT 5
+        ");
+        $stmt->bind_param("ss", $academicYear, $term);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $planned_enrollment[] = $row;
         }
         $stmt->close();
     }
@@ -155,15 +174,24 @@ function getDashboardStats() {
             'program_distribution' => $program_distribution,
             'professor_progress' => $professor_progress,
             'current_enrollment' => $current_enrollment,
-            'planned_enrollment' => [] 
+            'planned_enrollment' => $planned_enrollment
+        ]
+    ]);
+}
 
-function bulkUploadStudents() { /* ... keep existing code ... */ global $conn; if (!isset($_FILES['csv_file'])) { echo json_encode(['success' => false, 'message' => 'No file uploaded']); return; } /* ... rest of logic ... */ }
-function bulkUploadProfessors() { /* ... keep existing code ... */ global $conn; /* ... rest of logic ... */ }
-function bulkUploadCourses() { /* ... keep existing code ... */ global $conn; /* ... rest of logic ... */ }
-function getProfessorsList() { global $conn; $result = $conn->query("SELECT * FROM professors"); $data = []; while($r=$result->fetch_assoc())$data[]=$r; echo json_encode(['success'=>true,'professors'=>$data]); }
+function bulkUploadStudents() { echo json_encode(['success'=>false,'message'=>'Not implemented']); }
+function bulkUploadProfessors() { echo json_encode(['success'=>false,'message'=>'Not implemented']); }
+function bulkUploadCourses() { echo json_encode(['success'=>false,'message'=>'Not implemented']); }
+function getProfessorsList() { 
+    global $conn; 
+    $result = $conn->query("SELECT p.*, CONCAT(p.first_name, ' ', p.last_name) as full_name, COUNT(s.id) as advisee_count FROM professors p LEFT JOIN students s ON s.advisor_id = p.id GROUP BY p.id ORDER BY p.id_number"); 
+    $data = []; 
+    while($r=$result->fetch_assoc())$data[]=$r; 
+    echo json_encode(['success'=>true,'professors'=>$data]); 
+}
 function getStudentsList() { 
     global $conn; 
-    $q = "SELECT s.*, CONCAT(p.first_name, ' ', p.last_name) as adviser_name FROM students s LEFT JOIN professors p ON p.id = s.advisor_id"; 
+    $q = "SELECT s.*, CONCAT(s.first_name, ' ', s.last_name) as full_name, CONCAT(p.first_name, ' ', p.last_name) as adviser_name FROM students s LEFT JOIN professors p ON p.id = s.advisor_id ORDER BY s.id_number"; 
     $res = $conn->query($q); 
     $data=[]; 
     while($r=$res->fetch_assoc())$data[]=$r; 
