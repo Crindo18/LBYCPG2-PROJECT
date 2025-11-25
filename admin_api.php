@@ -3,6 +3,10 @@ require_once 'auth_check.php';
 requireAdmin();
 
 require_once 'config.php';
+require_once __DIR__ . '/vendor/autoload.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
 // Prevent any output before JSON
 ob_start();
@@ -662,22 +666,95 @@ function addSingleStudent() {
     $guardian_name = $_POST['guardian_name'];
     $guardian_phone = $_POST['guardian_phone'];
     
-    $password = password_hash($id_number, PASSWORD_DEFAULT);
+    // Generate random temporary password
+    $temp_password = generateRandomPassword(12);
+    $password_hash = password_hash($temp_password, PASSWORD_DEFAULT);
     
     try {
         $conn->begin_transaction();
         
+        // Insert into user_login_info
         $stmt = $conn->prepare("INSERT INTO user_login_info (id_number, username, password, user_type) VALUES (?, ?, ?, 'student')");
-        $stmt->bind_param("sss", $id_number, $id_number, $password);
+        $stmt->bind_param("sss", $id_number, $id_number, $password_hash);
         $stmt->execute();
         $user_id = $conn->insert_id;
         
+        // Insert into students table
         $stmt = $conn->prepare("INSERT INTO students (id, id_number, first_name, middle_name, last_name, college, department, program, specialization, phone_number, email, parent_guardian_name, parent_guardian_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("iisssssssssss", $user_id, $id_number, $first_name, $middle_name, $last_name, $college, $department, $program, $specialization, $phone, $email, $guardian_name, $guardian_phone);
         $stmt->execute();
         
         $conn->commit();
-        echo json_encode(['success' => true, 'message' => 'Student added successfully']);
+        
+        // Send email with temporary password
+        $mail = new PHPMailer(true);
+        
+        try {
+            // Server settings
+            $mail->isSMTP();
+            $mail->Host = MAILER_HOST;
+            $mail->SMTPAuth = true;
+            $mail->Username = MAILER_USERNAME;
+            $mail->Password = MAILER_PASSWORD;
+            $mail->SMTPSecure = MAILER_ENCRYPTION;
+            $mail->Port = MAILER_PORT;
+            
+            // Recipients
+            $mail->setFrom(MAILER_FROM_EMAIL, MAILER_FROM_NAME);
+            $mail->addAddress($email, "$first_name $last_name");
+            
+            // Content
+            $mail->isHTML(true);
+            $mail->Subject = 'Welcome to Academic Advising System - Your Account Details';
+            $mail->Body = "
+                <html>
+                <head>
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .header { background: #6a1b9a; color: white; padding: 20px; text-align: center; }
+                        .content { background: #f9f9f9; padding: 30px; }
+                        .credentials { background: white; padding: 20px; border-left: 4px solid #6a1b9a; margin: 20px 0; }
+                        .password { font-size: 24px; font-weight: bold; color: #6a1b9a; letter-spacing: 2px; }
+                        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class='container'>
+                        <div class='header'>
+                            <h1>Welcome to Academic Advising System</h1>
+                        </div>
+                        <div class='content'>
+                            <p>Dear <strong>$first_name $last_name</strong>,</p>
+                            <p>Your student account has been created successfully. Below are your login credentials:</p>
+                            
+                            <div class='credentials'>
+                                <p><strong>ID Number / Username:</strong> $id_number</p>
+                                <p><strong>Temporary Password:</strong></p>
+                                <p class='password'>$temp_password</p>
+                            </div>
+                            
+                            <p><strong>Important:</strong> Please log in and change your password immediately.</p>
+                            <p>You can access the system at: <a href='" . (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . "/login.php'>Login Here</a></p>
+                            
+                            <p>If you have any questions, please contact your academic adviser or the admin office.</p>
+                        </div>
+                        <div class='footer'>
+                            <p>Academic Advising System - De La Salle University</p>
+                            <p>This is an automated message. Please do not reply to this email.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            ";
+            
+            $mail->send();
+            echo json_encode(['success' => true, 'message' => 'Student added successfully and credentials sent to email']);
+        } catch (PHPMailerException $e) {
+            // Student was added but email failed
+            echo json_encode(['success' => true, 'message' => 'Student added successfully but email failed to send. Please provide credentials manually.', 'email_error' => $mail->ErrorInfo]);
+        }
+        
     } catch (Exception $e) {
         $conn->rollback();
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
@@ -782,22 +859,95 @@ function addSingleProfessor() {
     $department = $_POST['department'];
     $email = $_POST['email'];
     
-    $password = password_hash($id_number, PASSWORD_DEFAULT);
+    // Generate random temporary password
+    $temp_password = generateRandomPassword(12);
+    $password_hash = password_hash($temp_password, PASSWORD_DEFAULT);
     
     try {
         $conn->begin_transaction();
         
+        // Insert into user_login_info
         $stmt = $conn->prepare("INSERT INTO user_login_info (id_number, username, password, user_type) VALUES (?, ?, ?, 'professor')");
-        $stmt->bind_param("sss", $id_number, $id_number, $password);
+        $stmt->bind_param("sss", $id_number, $id_number, $password_hash);
         $stmt->execute();
         $user_id = $conn->insert_id;
         
+        // Insert into professors table
         $stmt = $conn->prepare("INSERT INTO professors (id, id_number, first_name, middle_name, last_name, department, email) VALUES (?, ?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("iisssss", $user_id, $id_number, $first_name, $middle_name, $last_name, $department, $email);
         $stmt->execute();
         
         $conn->commit();
-        echo json_encode(['success' => true, 'message' => 'Professor added successfully']);
+        
+        // Send email with temporary password
+        $mail = new PHPMailer(true);
+        
+        try {
+            // Server settings
+            $mail->isSMTP();
+            $mail->Host = MAILER_HOST;
+            $mail->SMTPAuth = true;
+            $mail->Username = MAILER_USERNAME;
+            $mail->Password = MAILER_PASSWORD;
+            $mail->SMTPSecure = MAILER_ENCRYPTION;
+            $mail->Port = MAILER_PORT;
+            
+            // Recipients
+            $mail->setFrom(MAILER_FROM_EMAIL, MAILER_FROM_NAME);
+            $mail->addAddress($email, "$first_name $last_name");
+            
+            // Content
+            $mail->isHTML(true);
+            $mail->Subject = 'Welcome to Academic Advising System - Your Account Details';
+            $mail->Body = "
+                <html>
+                <head>
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .header { background: #6a1b9a; color: white; padding: 20px; text-align: center; }
+                        .content { background: #f9f9f9; padding: 30px; }
+                        .credentials { background: white; padding: 20px; border-left: 4px solid #6a1b9a; margin: 20px 0; }
+                        .password { font-size: 24px; font-weight: bold; color: #6a1b9a; letter-spacing: 2px; }
+                        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class='container'>
+                        <div class='header'>
+                            <h1>Welcome to Academic Advising System</h1>
+                        </div>
+                        <div class='content'>
+                            <p>Dear <strong>Prof. $first_name $last_name</strong>,</p>
+                            <p>Your professor account has been created successfully. Below are your login credentials:</p>
+                            
+                            <div class='credentials'>
+                                <p><strong>ID Number / Username:</strong> $id_number</p>
+                                <p><strong>Temporary Password:</strong></p>
+                                <p class='password'>$temp_password</p>
+                            </div>
+                            
+                            <p><strong>Important:</strong> Please log in and change your password immediately.</p>
+                            <p>You can access the system at: <a href='" . (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . "/login.php'>Login Here</a></p>
+                            
+                            <p>If you have any questions, please contact the admin office.</p>
+                        </div>
+                        <div class='footer'>
+                            <p>Academic Advising System - De La Salle University</p>
+                            <p>This is an automated message. Please do not reply to this email.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            ";
+            
+            $mail->send();
+            echo json_encode(['success' => true, 'message' => 'Professor added successfully and credentials sent to email']);
+        } catch (PHPMailerException $e) {
+            // Professor was added but email failed
+            echo json_encode(['success' => true, 'message' => 'Professor added successfully but email failed to send. Please provide credentials manually.', 'email_error' => $mail->ErrorInfo]);
+        }
+        
     } catch (Exception $e) {
         $conn->rollback();
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
