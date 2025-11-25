@@ -243,20 +243,20 @@ $advisor_id = $result['advisor_id'];
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
         .container { display: flex; min-height: 100vh; }
-        .sidebar { width: 260px; background: #1976D2; color: white; position: fixed; height: 100vh; overflow-y: auto; }
-        .sidebar-header { padding: 25px 20px; background: #1565C0; }
+        .sidebar { width: 260px; background: #00A36C; color: white; position: fixed; height: 100vh; overflow-y: auto; }
+        .sidebar-header { padding: 25px 20px; background: #008558; }
         .sidebar-header h2 { font-size: 18px; margin-bottom: 5px; }
         .sidebar-header p { font-size: 13px; opacity: 0.9; }
         .sidebar-menu { padding: 20px 0; }
         .menu-item { padding: 15px 25px; color: white; text-decoration: none; display: block; transition: all 0.3s; border-left: 3px solid transparent; }
-        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #90CAF9; }
+        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #7FE5B8; }
         .main-content { margin-left: 260px; flex: 1; padding: 30px; width: calc(100% - 260px); }
         .top-bar { background: white; padding: 20px 30px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .top-bar h1 { font-size: 28px; color: #1976D2; }
+        .top-bar h1 { font-size: 28px; color: #00A36C; }
         .logout-btn { padding: 8px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; text-decoration: none; font-size: 14px; }
         
         .content-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        .content-card h3 { font-size: 20px; color: #1976D2; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
+        .content-card h3 { font-size: 20px; color: #00A36C; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
         
         .alert { padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; }
         .alert.success { background: #d4edda; border-left: 4px solid #28a745; color: #155724; }
@@ -267,13 +267,13 @@ $advisor_id = $result['advisor_id'];
         .calendar-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
         
         .date-card { background: #f8f9fa; border: 2px solid #e0e0e0; border-radius: 10px; padding: 20px; }
-        .date-card.has-slots { border-color: #1976D2; }
-        .date-header { font-size: 18px; font-weight: 600; color: #1976D2; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e0e0e0; }
+        .date-card.has-slots { border-color: #00A36C; }
+        .date-header { font-size: 18px; font-weight: 600; color: #00A36C; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e0e0e0; }
         .date-day { font-size: 14px; color: #666; margin-bottom: 10px; }
         
         .time-slots { display: flex; flex-direction: column; gap: 10px; }
         .time-slot { padding: 12px 15px; background: white; border: 2px solid #ddd; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s; }
-        .time-slot:hover { border-color: #1976D2; }
+        .time-slot:hover { border-color: #00A36C; }
         .time-slot.booked { background: #f0f0f0; border-color: #ccc; }
         .time-slot.my-booking { background: #d4edda; border-color: #28a745; }
         
@@ -282,8 +282,8 @@ $advisor_id = $result['advisor_id'];
         .booking-status { font-size: 13px; color: #666; margin-top: 3px; }
         
         .btn { padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s; }
-        .btn-primary { background: #1976D2; color: white; }
-        .btn-primary:hover { background: #1565C0; }
+        .btn-primary { background: #00A36C; color: white; }
+        .btn-primary:hover { background: #008558; }
         .btn-danger { background: #dc3545; color: white; }
         .btn-danger:hover { background: #c82333; }
         .btn-disabled { background: #ccc; color: #666; cursor: not-allowed; }
@@ -292,17 +292,18 @@ $advisor_id = $result['advisor_id'];
         .loading { text-align: center; padding: 40px; color: #666; }
         
         .my-bookings { margin-bottom: 30px; }
-        .booking-card { background: #e3f2fd; border-left: 4px solid #1976D2; padding: 20px; border-radius: 8px; margin-bottom: 15px; }
+        .booking-card { background: #e3f2fd; border-left: 4px solid #00A36C; padding: 20px; border-radius: 8px; margin-bottom: 15px; }
         .booking-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px; }
-        .booking-date { font-size: 18px; font-weight: 600; color: #1976D2; }
+        .booking-date { font-size: 18px; font-weight: 600; color: #00A36C; }
         .booking-details { font-size: 14px; color: #555; line-height: 1.6; }
         
         .tabs { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 2px solid #e0e0e0; flex-wrap: wrap; }
         .tab-btn { padding: 12px 24px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 15px; font-weight: 600; color: #666; transition: all 0.3s; }
-        .tab-btn.active { color: #1976D2; border-bottom-color: #1976D2; }
+        .tab-btn.active { color: #00A36C; border-bottom-color: #00A36C; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
     </style>
+
 </head>
 <body>
     <div class="container">
