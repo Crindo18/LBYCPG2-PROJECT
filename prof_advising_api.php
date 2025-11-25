@@ -112,7 +112,6 @@ function getFormDetails() {
                 CONCAT(s.first_name, ' ', s.last_name) as student_name,
                 s.email as student_email,
                 s.program,
-                s.year_level,
                 s.accumulated_failed_units
             FROM academic_advising_forms aaf
             JOIN students s ON s.id = aaf.student_id
