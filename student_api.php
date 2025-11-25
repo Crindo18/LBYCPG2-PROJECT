@@ -130,7 +130,49 @@ function submitStudyPlan() {}
 function getMyStudyPlans() {}
 function submitConcern() {}
 function getMyConcerns() {}
-function getAdviserInfo() {}
+
+function getAdviserInfo() {
+    global $conn;
+    $student_id = $_SESSION['user_id'];
+    
+    $stmt = $conn->prepare("
+        SELECT 
+            s.advisor_id,
+            CONCAT(p.first_name, ' ', p.last_name) as name,
+            p.email,
+            p.department
+        FROM students s
+        LEFT JOIN professors p ON p.id = s.advisor_id
+        WHERE s.id = ?
+    ");
+    $stmt->bind_param("i", $student_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($row = $result->fetch_assoc()) {
+        if ($row['advisor_id']) {
+            echo json_encode([
+                'success' => true,
+                'adviser' => [
+                    'name' => $row['name'],
+                    'email' => $row['email'],
+                    'department' => $row['department']
+                ]
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'No adviser assigned'
+            ]);
+        }
+    } else {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Student not found'
+        ]);
+    }
+}
+
 function getAvailableCourses() {}
 function checkPrerequisites() {}
 function uploadGradeScreenshot() {}

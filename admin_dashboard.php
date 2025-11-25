@@ -1,8 +1,12 @@
 <?php
-require_once 'auth_check.php';
-requireAdmin();
-
+session_start();
 require_once 'config.php';
+
+// Check if user is admin
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
+    header('Location: login.php');
+    exit();
+}
 
 $admin_username = $_SESSION['username'];
 ?>
@@ -65,10 +69,9 @@ $admin_username = $_SESSION['username'];
                 <p>Academic Advising System</p>
             </div>
             <nav class="sidebar-menu">
-                <a href="admin_dashboard.php" class="menu-item active">Dashboard</a>
+                <a href="admin_dashboard.php" class="menu-item">Dashboard</a>
                 <a href="admin_accounts.php" class="menu-item">User Accounts</a>
                 <a href="admin_courses.php" class="menu-item">Course Catalog</a>
-                <a href="admin_advising_forms.php" class="menu-item">Advising Forms</a>
                 <a href="admin_advisingassignment.php" class="menu-item">Advising Assignments</a>
                 <a href="admin_reports.php" class="menu-item">System Reports</a>
                 <a href="admin_bulk_operations.php" class="menu-item">Bulk Ops & Uploads</a>
@@ -78,7 +81,7 @@ $admin_username = $_SESSION['username'];
         <main class="main-content">
             <div class="top-bar">
                 <h1>Dashboard Overview</h1>
-                <a href="logout.php" class="logout-btn">Logout</a>
+                <a href="login.php" class="logout-btn">Logout</a>
             </div>
             
             <!-- Stats Cards -->
@@ -157,11 +160,10 @@ $admin_username = $_SESSION['username'];
     </div>
 
     <script>
-        let enrollmentChart, failedChart, clearanceChart, workloadChart, courseChart;
-        
-        window.onload = function() {
+        // Load dashboard data on page load
+        document.addEventListener('DOMContentLoaded', function() {
             loadDashboardStats();
-        };
+        });
 
         function loadDashboardStats() {
             fetch('admin_api.php?action=get_dashboard_stats')
