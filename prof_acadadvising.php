@@ -24,36 +24,36 @@ $professor_name = $professor['full_name'];
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
         .container { display: flex; min-height: 100vh; }
-        .sidebar { width: 260px; background: #6a1b9a; color: white; position: fixed; height: 100vh; overflow-y: auto; }
-        .sidebar-header { padding: 25px 20px; background: #4a148c; }
+        .sidebar { width: 260px; background: #00A36C; color: white; position: fixed; height: 100vh; overflow-y: auto; }
+        .sidebar-header { padding: 25px 20px; background: #00C97F; }
         .sidebar-header h2 { font-size: 18px; margin-bottom: 5px; }
         .sidebar-header p { font-size: 13px; opacity: 0.8; }
         .sidebar-menu { padding: 20px 0; }
         .menu-item { padding: 15px 25px; color: white; text-decoration: none; display: block; transition: all 0.3s; border-left: 3px solid transparent; }
-        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #BA68C8; }
+        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #7FE5B8; }
         .main-content { margin-left: 260px; flex: 1; padding: 30px; width: calc(100% - 260px); }
         .top-bar { background: white; padding: 20px 30px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .top-bar h1 { font-size: 28px; color: #6a1b9a; }
+        .top-bar h1 { font-size: 28px; color: #00A36C; }
         .logout-btn { padding: 8px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; text-decoration: none; font-size: 14px; }
         .content-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        .content-card h2 { font-size: 22px; color: #6a1b9a; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
-        .content-card h3 { font-size: 18px; color: #6a1b9a; margin-bottom: 15px; }
+        .content-card h2 { font-size: 22px; color: #00A36C; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
+        .content-card h3 { font-size: 18px; color: #00A36C; margin-bottom: 15px; }
         .form-row { display: flex; gap: 20px; margin-bottom: 20px; }
         .form-group { flex: 1; }
         .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #555; font-size: 14px; }
         .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
-        .form-group input:focus { outline: none; border-color: #6a1b9a; }
-        .btn-primary { padding: 10px 25px; background: #6a1b9a; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 500; }
-        .btn-primary:hover { background: #4a148c; }
+        .form-group input:focus { outline: none; border-color: #00A36C; }
+        .btn-primary { padding: 10px 25px; background: #00A36C; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 500; }
+        .btn-primary:hover { background: #00C97F; }
         .deadline-info { margin-top: 20px; padding-top: 20px; border-top: 1px solid #f0f0f0; color: #666; font-size: 14px; }
         .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 20px; }
         .filters { display: flex; gap: 10px; }
         .filter-btn { padding: 8px 16px; border: 1px solid #ddd; background: white; color: #555; border-radius: 5px; cursor: pointer; font-size: 13px; transition: all 0.3s; }
         .filter-btn:hover { background: #f8f9fa; }
-        .filter-btn.active { background: #6a1b9a; color: white; border-color: #6a1b9a; }
+        .filter-btn.active { background: #00A36C; color: white; border-color: #00A36C; }
         .search-box { flex: 0 0 300px; }
         .search-box input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
-        .search-box input:focus { outline: none; border-color: #6a1b9a; }
+        .search-box input:focus { outline: none; border-color: #00A36C; }
         .table-container { overflow-x: auto; }
         .data-table { width: 100%; border-collapse: collapse; }
         .data-table th { background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; font-size: 13px; color: #555; border-bottom: 2px solid #e0e0e0; }
@@ -73,13 +73,13 @@ $professor_name = $professor['full_name'];
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
         .modal-content { background-color: white; margin: 3% auto; padding: 30px; border-radius: 10px; width: 80%; max-width: 900px; max-height: 85vh; overflow-y: auto; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
-        .modal-header h2 { color: #6a1b9a; font-size: 22px; }
+        .modal-header h2 { color: #00A36C; font-size: 22px; }
         .close { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 1; }
         .close:hover { color: #000; }
         .submission-detail { margin-bottom: 25px; }
         .submission-detail h3 { color: #333; margin-bottom: 15px; font-size: 16px; }
         .subject-list { background: #f8f9fa; padding: 15px; border-radius: 5px; }
-        .subject-item { margin-bottom: 10px; padding: 10px; background: white; border-radius: 5px; border-left: 3px solid #6a1b9a; }
+        .subject-item { margin-bottom: 10px; padding: 10px; background: white; border-radius: 5px; border-left: 3px solid #00A36C; }
         .student-info-box { margin-bottom: 20px; padding: 15px; background: #e3f2fd; border-radius: 5px; }
         .student-info-box p { margin-bottom: 8px; font-size: 14px; }
         .student-info-box p:last-child { margin-bottom: 0; }

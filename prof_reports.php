@@ -926,18 +926,18 @@ $professor_name = $stmt->get_result()->fetch_assoc()['full_name'];
         
         /* Sidebar Styles */
         .container { display: flex; min-height: 100vh; }
-        .sidebar { width: 260px; background: #6a1b9a; color: white; position: fixed; height: 100vh; overflow-y: auto; }
-        .sidebar-header { padding: 25px 20px; background: #4a148c; }
+        .sidebar { width: 260px; background: #00A36C; color: white; position: fixed; height: 100vh; overflow-y: auto; }
+        .sidebar-header { padding: 25px 20px; background: #00C97F; }
         .sidebar-header h2 { font-size: 18px; margin-bottom: 5px; }
         .sidebar-header p { font-size: 13px; opacity: 0.8; }
         .sidebar-menu { padding: 20px 0; }
         .menu-item { padding: 15px 25px; color: white; text-decoration: none; display: block; transition: all 0.3s; border-left: 3px solid transparent; }
-        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #BA68C8; }
+        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #7FE5B8; }
         
         /* Main Content */
         .main-content { margin-left: 260px; flex: 1; padding: 30px; width: calc(100% - 260px); }
         .top-bar { background: white; padding: 20px 30px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .top-bar h1 { font-size: 28px; color: #6a1b9a; }
+        .top-bar h1 { font-size: 28px; color: #00A36C; }
         .top-bar p { color: #666; font-size: 14px; margin-top: 5px; }
         .logout-btn { padding: 8px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; text-decoration: none; font-size: 14px; }
         
@@ -968,12 +968,12 @@ $professor_name = $stmt->get_result()->fetch_assoc()['full_name'];
 
         .tab-btn:hover {
             background: #f7fafc;
-            color: #6a1b9a;
+            color: #00A36C;
         }
 
         .tab-btn.active {
-            color: #6a1b9a;
-            border-bottom-color: #6a1b9a;
+            color: #00A36C;
+            border-bottom-color: #00A36C;
         }
 
         .tab-content {
@@ -1028,7 +1028,7 @@ $professor_name = $stmt->get_result()->fetch_assoc()['full_name'];
         }
 
         .btn-primary {
-            background: #6a1b9a;
+            background: #00A36C;
             color: white;
         }
 
@@ -1082,7 +1082,7 @@ $professor_name = $stmt->get_result()->fetch_assoc()['full_name'];
         .stat-value {
             font-size: 2rem;
             font-weight: 700;
-            color: #6a1b9a;
+            color: #00A36C;
         }
 
         .stat-trend {
@@ -1175,7 +1175,7 @@ $professor_name = $stmt->get_result()->fetch_assoc()['full_name'];
 
         .badge-info {
             background: #bee3f8;
-            color: #6a1b9a;
+            color: #00A36C;
         }
 
         .loading {
@@ -1207,7 +1207,7 @@ $professor_name = $stmt->get_result()->fetch_assoc()['full_name'];
 
         .progress-fill {
             height: 100%;
-            background: #6a1b9a;
+            background: #00A36C;
             transition: width 0.3s;
         }
 

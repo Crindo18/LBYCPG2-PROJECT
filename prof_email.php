@@ -169,29 +169,29 @@ $professor_name = $professor['full_name'];
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
         .container { display: flex; min-height: 100vh; }
-        .sidebar { width: 260px; background: #6a1b9a; color: white; position: fixed; height: 100vh; overflow-y: auto; }
-        .sidebar-header { padding: 25px 20px; background: #4a148c; }
+        .sidebar { width: 260px; background: #00A36C; color: white; position: fixed; height: 100vh; overflow-y: auto; }
+        .sidebar-header { padding: 25px 20px; background: #00C97F; }
         .sidebar-header h2 { font-size: 18px; margin-bottom: 5px; }
         .sidebar-header p { font-size: 13px; opacity: 0.8; }
         .sidebar-menu { padding: 20px 0; }
         .menu-item { padding: 15px 25px; color: white; text-decoration: none; display: block; transition: all 0.3s; border-left: 3px solid transparent; }
-        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #BA68C8; }
+        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); border-left-color: #7FE5B8; }
         .main-content { margin-left: 260px; flex: 1; padding: 30px; width: calc(100% - 260px); }
         .top-bar { background: white; padding: 20px 30px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .top-bar h1 { font-size: 28px; color: #6a1b9a; }
+        .top-bar h1 { font-size: 28px; color: #00A36C; }
         .logout-btn { padding: 8px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; text-decoration: none; font-size: 14px; }
         .content-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        .content-card h2 { font-size: 22px; color: #6a1b9a; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
+        .content-card h2 { font-size: 22px; color: #00A36C; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
         .tabs { display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #f0f0f0; }
         .tab { padding: 12px 20px; background: none; border: none; color: #666; cursor: pointer; font-size: 14px; font-weight: 500; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.3s; }
-        .tab.active { color: #6a1b9a; border-bottom-color: #6a1b9a; }
-        .tab:hover { color: #6a1b9a; }
+        .tab.active { color: #00A36C; border-bottom-color: #00A36C; }
+        .tab:hover { color: #00A36C; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #555; font-size: 14px; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; font-family: inherit; }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #6a1b9a; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #00A36C; }
         .form-group textarea { min-height: 150px; resize: vertical; }
         .form-group small { color: #666; font-size: 13px; display: block; margin-top: 5px; }
         
@@ -199,10 +199,10 @@ $professor_name = $professor['full_name'];
         .recipient-selector { border: 1px solid #ddd; border-radius: 5px; padding: 15px; background: #f8f9fa; }
         .recipient-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd; }
         .recipient-count { font-size: 14px; color: #666; }
-        .recipient-count strong { color: #6a1b9a; }
+        .recipient-count strong { color: #00A36C; }
         .search-box-recipients { margin-bottom: 15px; }
         .search-box-recipients input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
-        .search-box-recipients input:focus { outline: none; border-color: #6a1b9a; }
+        .search-box-recipients input:focus { outline: none; border-color: #00A36C; }
         .recipient-list { max-height: 250px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; background: white; }
         .recipient-item { padding: 10px 15px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: background 0.2s; }
         .recipient-item:last-child { border-bottom: none; }
@@ -211,8 +211,8 @@ $professor_name = $professor['full_name'];
         .recipient-item label { cursor: pointer; flex: 1; font-size: 14px; margin: 0; }
         .recipient-item .student-id { color: #999; font-size: 13px; margin-left: 8px; }
         .select-actions { display: flex; gap: 10px; }
-        .btn-small { padding: 5px 12px; background: #6a1b9a; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
-        .btn-small:hover { background: #4a148c; }
+        .btn-small { padding: 5px 12px; background: #00A36C; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-small:hover { background: #00C97F; }
         .btn-small.secondary { background: #6c757d; }
         .btn-small.secondary:hover { background: #5a6268; }
         
@@ -220,8 +220,8 @@ $professor_name = $professor['full_name'];
         .checkbox-group input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; }
         .checkbox-group label { margin: 0; font-weight: normal; cursor: pointer; }
         .btn-group { display: flex; gap: 10px; }
-        .btn-primary { padding: 10px 25px; background: #6a1b9a; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 500; }
-        .btn-primary:hover { background: #4a148c; }
+        .btn-primary { padding: 10px 25px; background: #00A36C; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 500; }
+        .btn-primary:hover { background: #00C97F; }
         .btn-secondary { padding: 10px 25px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }
         .btn-secondary:hover { background: #5a6268; }
         .table-container { overflow-x: auto; margin-top: 20px; }

@@ -38,7 +38,7 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
 
         .sidebar {
             width: 260px;
-            background: #6a1b9a;
+            background: #00A36C;
             color: white;
             position: fixed;
             height: 100vh;
@@ -47,7 +47,7 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
 
         .sidebar-header {
             padding: 25px 20px;
-            background: #4a148c;
+            background: #00C97F;
         }
 
         .sidebar-header h2 {
@@ -76,7 +76,7 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
         .menu-item:hover,
         .menu-item.active {
             background: rgba(255, 255, 255, 0.1);
-            border-left-color: #BA68C8;
+            border-left-color: #7FE5B8;
         }
 
         .main-content {
@@ -99,7 +99,7 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
 
         .top-bar h1 {
             font-size: 28px;
-            color: #6a1b9a;
+            color: #00A36C;
         }
 
         .logout-btn {
@@ -136,7 +136,7 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
         .stat-card .value {
             font-size: 36px;
             font-weight: bold;
-            color: #6a1b9a;
+            color: #00A36C;
             margin-bottom: 5px;
         }
 
@@ -167,7 +167,7 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
 
         .content-card h2 {
             font-size: 22px;
-            color: #6a1b9a;
+            color: #00A36C;
             margin-bottom: 20px;
             padding-bottom: 15px;
             border-bottom: 2px solid #f0f0f0;
