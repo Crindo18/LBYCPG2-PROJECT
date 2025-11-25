@@ -229,10 +229,70 @@ $professor_name = $stmt->get_result()->fetch_assoc()['full_name'];
         .btn-delete:hover { background: #c82333; }
         .loading { text-align: center; padding: 40px; color: #666; }
         .no-data { text-align: center; padding: 40px; color: #999; font-style: italic; }
-        .stats-bar { display: flex; gap: 15px; margin-bottom: 20px; }
-        .stat-item { padding: 10px 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #00A36C; }
-        .stat-item .label { font-size: 12px; color: #666; margin-bottom: 5px; }
-        .stat-item .value { font-size: 24px; font-weight: bold; color: #00A36C; }
+        .stats-bar { display: flex; gap: 20px; margin-bottom: 30px; }
+        .stat-item { 
+            flex: 1; 
+            padding: 25px; 
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 12px; 
+            text-align: center; 
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            transition: all 0.3s ease;
+        }
+        .stat-item:hover { 
+            transform: translateY(-4px); 
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+        }
+        .stat-item:nth-child(1) { border-color: rgba(0, 163, 108, 0.1); }
+        .stat-item:nth-child(1)::before { background: linear-gradient(90deg, #00A36C, #00C97F); }
+        .stat-item:nth-child(1):hover { border-color: rgba(0, 163, 108, 0.3); }
+        .stat-item:nth-child(2) { border-color: rgba(33, 150, 243, 0.1); }
+        .stat-item:nth-child(2)::before { background: linear-gradient(90deg, #2196F3, #64B5F6); }
+        .stat-item:nth-child(2):hover { border-color: rgba(33, 150, 243, 0.3); }
+        .stat-item:nth-child(3) { border-color: rgba(76, 175, 80, 0.1); }
+        .stat-item:nth-child(3)::before { background: linear-gradient(90deg, #4CAF50, #81C784); }
+        .stat-item:nth-child(3):hover { border-color: rgba(76, 175, 80, 0.3); }
+        .stat-item .label { 
+            font-size: 12px; 
+            color: #666; 
+            margin-bottom: 10px; 
+            text-transform: uppercase; 
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+        .stat-item .value { 
+            font-size: 36px; 
+            font-weight: 700; 
+            line-height: 1;
+            background: linear-gradient(135deg, #00A36C 0%, #00C97F 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .stat-item:nth-child(2) .value {
+            background: linear-gradient(135deg, #2196F3 0%, #64B5F6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .stat-item:nth-child(3) .value {
+            background: linear-gradient(135deg, #4CAF50 0%, #81C784 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
     </style>
 </head>
 <body>
@@ -245,7 +305,7 @@ $professor_name = $stmt->get_result()->fetch_assoc()['full_name'];
             <nav class="sidebar-menu">
                 <a href="prof_dashboard.php" class="menu-item">Dashboard</a>
                 <a href="prof_advisees.php" class="menu-item">My Advisees</a>
-                <a href="prof_study_plans.php" class="menu-item">Study Plans</a>
+                <a href="prof_advising_forms.php" class="menu-item">Advising Forms</a>
                 <a href="prof_acadadvising.php" class="menu-item">Academic Advising</a>
                 <a href="prof_concerns.php" class="menu-item active">Student Concerns</a>
                 <a href="prof_reports.php" class="menu-item">Reports</a>

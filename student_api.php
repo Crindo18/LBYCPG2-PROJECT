@@ -22,22 +22,35 @@ $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
 try {
     switch ($action) {
+        // Dashboard
         case 'get_dashboard_data': getDashboardData(); break;
-        case 'get_my_booklet': getMyBooklet(); break;
+        
+        // Booklet
+        case 'get_my_booklet': getMyBookletEditable(); break; // Redirect to editable version
+        case 'get_my_booklet_editable': getMyBookletEditable(); break;
+        case 'submit_grade_edit': submitGradeEdit(); break;
+        case 'get_my_edit_requests': getMyEditRequests(); break;
+        
+        // GPA
         case 'get_my_gpa': getMyGPA(); break;
+        
+        // Advising Form
         case 'get_study_plan_form': getStudyPlanForm(); break;
         case 'submit_study_plan': submitStudyPlan(); break;
         case 'get_my_study_plans': getMyStudyPlans(); break;
+        
+        // Concerns (RESTORED)
         case 'submit_concern': submitConcern(); break;
         case 'get_my_concerns': getMyConcerns(); break;
+        
+        // Advisers & Courses
         case 'get_adviser_info': getAdviserInfo(); break;
         case 'get_available_courses': getAvailableCourses(); break;
         case 'check_prerequisites': checkPrerequisites(); break;
         case 'upload_grade_screenshot': uploadGradeScreenshot(); break;
-        case 'get_my_booklet_editable': getMyBookletEditable(); break;
-        case 'submit_grade_edit': submitGradeEdit(); break;
-        case 'get_my_edit_requests': getMyEditRequests(); break;
-        default: echo json_encode(['success' => false, 'message' => 'Invalid action']);
+        
+        default: 
+            echo json_encode(['success' => false, 'message' => 'Invalid action']);
     }
 } catch (Exception $e) {
     ob_clean();
@@ -45,133 +58,121 @@ try {
 }
 
 // ---------------------------------------------------------
-// CORE DASHBOARD FUNCTION (UPDATED)
+// CONCERN FUNCTIONS (Restored)
 // ---------------------------------------------------------
-function getDashboardData() {
+
+function submitConcern() {
     global $conn, $student_id;
     
-    // 1. Get Student Info
-    $stmt = $conn->prepare("
-        SELECT 
-            s.*,
-            CONCAT(s.first_name, ' ', s.last_name) as full_name,
-            CONCAT(p.first_name, ' ', p.last_name) as adviser_name,
-            p.email as adviser_email
-        FROM students s
-        LEFT JOIN professors p ON p.id = s.advisor_id
-        WHERE s.id = ?
-    ");
-    $stmt->bind_param("i", $student_id);
-    $stmt->execute();
-    $student = $stmt->get_result()->fetch_assoc();
+    $term = $_POST['term'] ?? '';
+    $concern = $_POST['concern'] ?? '';
     
-    // 2. DYNAMIC CALCULATION: Get stats directly from Booklet instead of static summary table
+    if (empty($term) || empty($concern)) {
+        throw new Exception('Please fill in all required fields');
+    }
+    
     $stmt = $conn->prepare("
-        SELECT academic_year, term, units, grade, is_failed 
-        FROM student_advising_booklet 
-        WHERE student_id = ?
+        INSERT INTO student_concerns (student_id, term, concern, submission_date)
+        VALUES (?, ?, ?, NOW())
+    ");
+    $stmt->bind_param("iss", $student_id, $term, $concern);
+    
+    if ($stmt->execute()) {
+        ob_clean();
+        echo json_encode(['success' => true, 'message' => 'Concern submitted successfully']);
+    } else {
+        throw new Exception('Database error: ' . $stmt->error);
+    }
+}
+
+function getMyConcerns() {
+    global $conn, $student_id;
+    
+    $stmt = $conn->prepare("
+        SELECT * FROM student_concerns 
+        WHERE student_id = ? 
+        ORDER BY submission_date DESC
     ");
     $stmt->bind_param("i", $student_id);
     $stmt->execute();
     $result = $stmt->get_result();
+    
+    $concerns = [];
+    while ($row = $result->fetch_assoc()) {
+        $concerns[] = $row;
+    }
+    
+    ob_clean();
+    echo json_encode(['success' => true, 'concerns' => $concerns]);
+}
 
-    $total_units_taken = 0;
-    $total_grade_points = 0;
-    $total_failed_units = 0;
+// ---------------------------------------------------------
+// DASHBOARD & CORE FUNCTIONS
+// ---------------------------------------------------------
+
+function getDashboardData() {
+    global $conn, $student_id;
+    
+    // Student Info
+    $stmt = $conn->prepare("SELECT s.*, CONCAT(s.first_name, ' ', s.last_name) as full_name, CONCAT(p.first_name, ' ', p.last_name) as adviser_name, p.email as adviser_email FROM students s LEFT JOIN professors p ON p.id = s.advisor_id WHERE s.id = ?");
+    $stmt->bind_param("i", $student_id);
+    $stmt->execute();
+    $student = $stmt->get_result()->fetch_assoc();
+    
+    // Calculate Stats from Booklet
+    $stmt = $conn->prepare("SELECT units, grade, is_failed FROM student_advising_booklet WHERE student_id = ?");
+    $stmt->bind_param("i", $student_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $total_units = 0;
+    $grade_points = 0;
+    $failed_units = 0;
     $total_courses = 0;
-
-    // Variables to track "Latest Term"
-    $latest_year = '';
-    $latest_term = 0;
-    $term_units = 0;
-    $term_points = 0;
 
     while ($row = $result->fetch_assoc()) {
         $total_courses++;
         $units = floatval($row['units']);
-        $gradeStr = $row['grade'];
-        $is_failed = $row['is_failed'];
-
-        // Check if this is the latest term we've seen so far
-        // Logic: If Year is greater, OR Year is same but Term is greater
-        $is_current_row_newer = ($row['academic_year'] > $latest_year) || 
-                                ($row['academic_year'] == $latest_year && $row['term'] > $latest_term);
-
-        if ($is_current_row_newer) {
-            $latest_year = $row['academic_year'];
-            $latest_term = $row['term'];
-            // Reset term counters because we found a newer term
-            $term_units = 0;
-            $term_points = 0;
+        $grade = floatval($row['grade']);
+        
+        if ($row['is_failed'] == 1 || ($row['grade'] !== null && $grade == 0)) {
+            $failed_units += $units;
         }
-
-        // Count Failures
-        if ($is_failed == 1 || ($gradeStr !== null && floatval($gradeStr) == 0.0)) {
-            $total_failed_units += $units;
-        }
-
-        // Calculate GPA (only if grade is present)
-        if ($gradeStr !== null && $gradeStr !== '') {
-            $gradeVal = floatval($gradeStr);
-            
-            // Add to Cumulative
-            $total_units_taken += $units;
-            $total_grade_points += ($units * $gradeVal);
-
-            // Add to Term (if it matches latest)
-            if ($row['academic_year'] == $latest_year && $row['term'] == $latest_term) {
-                $term_units += $units;
-                $term_points += ($units * $gradeVal);
-            }
+        
+        if ($row['grade'] !== null && $row['grade'] !== '') {
+            $total_units += $units;
+            $grade_points += ($units * $grade);
         }
     }
 
-    // Final GPA Math
-    $cgpa = $total_units_taken > 0 ? round($total_grade_points / $total_units_taken, 3) : 0;
-    $term_gpa = $term_units > 0 ? round($term_points / $term_units, 3) : 0;
-
-    $gpa_data = [
-        'cgpa' => number_format($cgpa, 3),
-        'term_gpa' => number_format($term_gpa, 3)
-    ];
-
-    // Overwrite student failure count with the real count from booklet
-    $student['accumulated_failed_units'] = $total_failed_units;
+    $cgpa = $total_units > 0 ? round($grade_points / $total_units, 3) : 0;
+    $student['accumulated_failed_units'] = $failed_units; // Update student record display
     
-    // 3. Get Pending Plans Count
-    $stmt = $conn->prepare("
-        SELECT COUNT(*) as pending 
-        FROM academic_advising_forms 
-        WHERE student_id = ? AND status = 'pending'
-    ");
+    // Pending Plans
+    $stmt = $conn->prepare("SELECT COUNT(*) as pending FROM academic_advising_forms WHERE student_id = ? AND status = 'pending'");
     $stmt->bind_param("i", $student_id);
     $stmt->execute();
-    $pending_plans = $stmt->get_result()->fetch_assoc()['pending'];
+    $pending = $stmt->get_result()->fetch_assoc()['pending'];
     
     ob_clean();
     echo json_encode([
         'success' => true,
         'data' => [
             'student' => $student,
-            'gpa' => $gpa_data,
-            'pending_plans' => $pending_plans,
+            'gpa' => ['cgpa' => number_format($cgpa, 3), 'term_gpa' => '-'],
+            'pending_plans' => $pending,
             'total_courses' => $total_courses
         ]
     ]);
 }
 
 // ---------------------------------------------------------
-// BOOKLET & EDIT FUNCTIONS (Required for Booklet Page)
+// BOOKLET & EDIT FUNCTIONS
 // ---------------------------------------------------------
 
 function getMyBookletEditable() {
     global $conn, $student_id;
-    $stmt = $conn->prepare("
-        SELECT b.*, COALESCE(b.approval_status, 'approved') as approval_status
-        FROM student_advising_booklet b
-        WHERE b.student_id = ? 
-        ORDER BY b.academic_year ASC, b.term ASC, b.course_code ASC
-    ");
+    $stmt = $conn->prepare("SELECT b.*, COALESCE(b.approval_status, 'approved') as approval_status FROM student_advising_booklet b WHERE b.student_id = ? ORDER BY b.academic_year ASC, b.term ASC, b.course_code ASC");
     $stmt->bind_param("i", $student_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -183,8 +184,6 @@ function getMyBookletEditable() {
 
 function submitGradeEdit() {
     global $conn, $student_id;
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception('Invalid Request Method');
-
     $record_id = $_POST['record_id'] ?? null;
     $new_grade = $_POST['new_grade'] ?? null;
     $is_failed = $_POST['is_failed'] ?? 0;
@@ -192,64 +191,62 @@ function submitGradeEdit() {
     
     if (!$record_id) throw new Exception('Record ID missing');
 
-    $stmt = $conn->prepare("SELECT course_code, grade FROM student_advising_booklet WHERE id = ? AND student_id = ?");
+    $stmt = $conn->prepare("SELECT grade FROM student_advising_booklet WHERE id = ? AND student_id = ?");
     $stmt->bind_param("ii", $record_id, $student_id);
     $stmt->execute();
-    $result = $stmt->get_result();
+    if ($stmt->get_result()->num_rows === 0) throw new Exception('Record not found');
     
-    if ($result->num_rows === 0) throw new Exception('Record not found');
-    $record = $result->fetch_assoc();
-    $old_grade = $record['grade'] ?? 'N/A';
-    
-    $stmt = $conn->prepare("INSERT INTO booklet_edit_requests (student_id, booklet_record_id, field_name, old_value, new_value, reason, status) VALUES (?, ?, 'grade', ?, ?, ?, 'pending')");
-    $new_val_str = $new_grade . ($is_failed == 1 ? ' (Failed)' : '');
-    
-    $stmt->bind_param("iisss", $student_id, $record_id, $old_grade, $new_val_str, $reason);
+    $stmt = $conn->prepare("INSERT INTO booklet_edit_requests (student_id, booklet_record_id, field_name, old_value, new_value, reason, status) VALUES (?, ?, 'grade', 'old', ?, ?, 'pending')");
+    $val = "$new_grade" . ($is_failed ? " (Failed)" : "");
+    $stmt->bind_param("iisss", $student_id, $record_id, $val, $reason);
     
     if ($stmt->execute()) {
-        $stmt = $conn->prepare("UPDATE student_advising_booklet SET approval_status = 'pending', previous_grade = grade, grade = ?, is_failed = ?, edit_requested_at = NOW(), modified_by = 'student' WHERE id = ?");
-        $stmt->bind_param("dii", $new_grade, $is_failed, $record_id);
-        $stmt->execute();
+        $conn->query("UPDATE student_advising_booklet SET approval_status = 'pending', grade = '$new_grade', is_failed = $is_failed WHERE id = $record_id");
         ob_clean();
-        echo json_encode(['success' => true, 'message' => 'Edit request submitted']);
+        echo json_encode(['success' => true, 'message' => 'Request submitted']);
     } else {
-        throw new Exception('Failed to submit request');
+        throw new Exception('DB Error');
     }
 }
 
 function getMyEditRequests() {
     global $conn, $student_id;
-    $stmt = $conn->prepare("SELECT er.*, b.course_code, b.course_name FROM booklet_edit_requests er JOIN student_advising_booklet b ON b.id = er.booklet_record_id WHERE er.student_id = ? ORDER BY er.requested_at DESC");
+    $stmt = $conn->prepare("SELECT er.*, b.course_code FROM booklet_edit_requests er JOIN student_advising_booklet b ON b.id = er.booklet_record_id WHERE er.student_id = ? ORDER BY er.requested_at DESC");
     $stmt->bind_param("i", $student_id);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $requests = [];
-    while ($row = $result->fetch_assoc()) $requests[] = $row;
+    $res = $stmt->get_result();
+    $data = [];
+    while($row = $res->fetch_assoc()) $data[] = $row;
     ob_clean();
-    echo json_encode(['success' => true, 'requests' => $requests]);
+    echo json_encode(['success' => true, 'requests' => $data]);
 }
 
-// --- Stubs for other functions to prevent errors if called ---
-function getMyBooklet() { getMyBookletEditable(); }
-function getMyGPA() { 
-    // Redirect to dashboard logic if specific GPA endpoint called
-    getDashboardData();
-}
-function getStudyPlanForm() {}
-function submitStudyPlan() {}
-function getMyStudyPlans() {}
-function submitConcern() {}
-function getMyConcerns() {}
+// ---------------------------------------------------------
+// OTHER HELPERS
+// ---------------------------------------------------------
+
 function getAdviserInfo() {
     global $conn, $student_id;
     $stmt = $conn->prepare("SELECT p.id, p.id_number, CONCAT(p.first_name, ' ', p.last_name) as name, p.email, p.department FROM students s JOIN professors p ON p.id = s.advisor_id WHERE s.id = ?");
     $stmt->bind_param("i", $student_id);
     $stmt->execute();
     $res = $stmt->get_result();
-    if($res->num_rows > 0) echo json_encode(['success'=>true, 'adviser'=>$res->fetch_assoc()]);
-    else echo json_encode(['success'=>false, 'message'=>'No adviser']);
+    if($res->num_rows > 0) {
+        echo json_encode(['success'=>true, 'adviser'=>$res->fetch_assoc()]);
+    } else {
+        echo json_encode(['success'=>false, 'message'=>'No adviser']);
+    }
 }
-function getAvailableCourses() {}
-function checkPrerequisites() {}
-function uploadGradeScreenshot() {}
+
+// Stub for getMyGPA if called directly (redirects to dashboard logic)
+function getMyGPA() { getDashboardData(); }
+
+// Stub for functions not used in current flow but kept for compatibility
+function getStudyPlanForm() { echo json_encode(['success'=>false, 'message'=>'Use Advising Form']); }
+function submitStudyPlan() { echo json_encode(['success'=>false, 'message'=>'Use Advising Form']); }
+function getMyStudyPlans() { echo json_encode(['success'=>false, 'message'=>'Use Advising Form']); }
+function getAvailableCourses() { echo json_encode(['success'=>false]); }
+function checkPrerequisites() { echo json_encode(['success'=>true]); }
+function uploadGradeScreenshot() { echo json_encode(['success'=>true]); }
+
 ?>

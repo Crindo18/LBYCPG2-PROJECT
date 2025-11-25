@@ -274,7 +274,7 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
             <nav class="sidebar-menu">
                 <a href="prof_dashboard.php" class="menu-item active">Dashboard</a>
                 <a href="prof_advisees.php" class="menu-item">My Advisees</a>
-                <a href="prof_study_plans.php" class="menu-item">Study Plans</a>
+                <a href="prof_advising_forms.php" class="menu-item">Advising Forms</a>
                 <a href="prof_acadadvising.php" class="menu-item">Academic Advising</a>
                 <a href="prof_concerns.php" class="menu-item">Student Concerns</a>
                 <a href="prof_reports.php" class="menu-item">Reports</a>
