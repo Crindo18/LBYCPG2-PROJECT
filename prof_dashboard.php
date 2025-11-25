@@ -280,7 +280,6 @@ $professor_name = $professor['first_name'] . ' ' . $professor['last_name'];
                 <a href="prof_reports.php" class="menu-item">Reports</a>
                 <a href="prof_email.php" class="menu-item">Email System</a>
                 <a href="prof_schedule.php" class="menu-item">Schedule</a>
-                <a href="prof_grade_approvals.php" class="menu-item">Grade Approvals</a>
             </nav>
         </aside>
 
